@@ -1,0 +1,356 @@
+{
+  "name": "Odoo_Source_Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8069/api/crm/lead/bulk_create",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "=Content-Type",
+              "value": "=application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer 24f572e1a8352e7ac7ac6f7554141e7d41d918ba"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json) }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1136,
+        -864
+      ],
+      "id": "004784df-0bcf-4eab-a54c-2141e4d1de40",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "piste-run",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -544,
+        -848
+      ],
+      "id": "1ae06655-d1b6-4b9a-9a44-2276a4ab7d46",
+      "name": "Webhook",
+      "webhookId": "06528e65-75c5-4715-bbb0-c86f78c902bc"
+    },
+    {
+      "parameters": {
+        "url": "https://boamp-datadila.opendatasoft.com/api/records/1.0/search/",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "dataset",
+              "value": "boamp"
+            },
+            {
+              "name": "rows",
+              "value": "={{ $json.rows }}"
+            },
+            {
+              "name": "q",
+              "value": "={{ $json.queryString }}"
+            },
+            {
+              "name": "refine.etat",
+              "value": "INITIAL"
+            },
+            {
+              "name": "refine.dateparution",
+              "value": "=2026/02"
+            },
+            {
+              "name": "refine.code_departement",
+              "value": "75"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -272,
+        -784
+      ],
+      "id": "176ba973-0e53-4668-9140-459b8fc8b2e1",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const records = $input.first().json.records;\n\nreturn records.map(record => ({\n  json: {\n    idweb: record.fields.idweb,\n    objet: record.fields.objet,\n    acheteur: record.fields.nomacheteur,\n    dateparution: record.fields.dateparution,\n    datelimitereponse: record.fields.datelimitereponse || \"\",\n    departement: record.fields.code_departement,\n    url_avis: record.fields.url_avis,\n    pdf_url: `https://www.boamp.fr/telechargements/FILES/PDF/${record.fields.dateparution.substring(0,4)}/${record.fields.dateparution.substring(5,7)}/${record.fields.idweb}.pdf`\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        -768
+      ],
+      "id": "d789bedb-ba45-44b8-98a0-835981cd4037",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2d5aa8c8-3b75-4e6a-957e-04da46c4a6f9",
+              "name": "queryString",
+              "value": "={{ $json.body.keywords_required[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "966120d3-546a-4706-9594-756783baf0d9",
+              "name": "type",
+              "value": "Services",
+              "type": "string"
+            },
+            {
+              "id": "f8162309-ffbb-45b2-b8b3-b95f6765641f",
+              "name": "department",
+              "value": 5,
+              "type": "number"
+            },
+            {
+              "id": "bcd67b38-35a8-482b-bfef-c9d9a87d2224",
+              "name": "rows",
+              "value": 3,
+              "type": "number"
+            },
+            {
+              "id": "b0615d07-ff47-4a05-8cac-640ecdf73bf3",
+              "name": "dataset",
+              "value": "={{ $json.body.platforms.boamp }}",
+              "type": "boolean"
+            },
+            {
+              "id": "390ab630-35ad-4c68-a316-3ef0d4ce5851",
+              "name": "",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -400,
+        -816
+      ],
+      "id": "1861cbed-2ed0-4231-8cf1-b24f9b1fed09",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        304,
+        -784
+      ],
+      "id": "932d93a1-80ed-46ac-bb91-b366df8ced4a",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconst offers = await Promise.all(items.map(async item => {\n  const raw = item.json.text;\n  const data = typeof raw === \"string\" ? JSON.parse(raw) : raw;\n\n  let expectedRevenue = Number(data.expected_revenue);\n  if (!expectedRevenue || expectedRevenue <= 0) expectedRevenue = 1000;\n\n  let buId = Number(data.business_unit_id);\n  if (!buId || ![2,3,4,5].includes(buId)) buId = 3;\n\n  // ✅ Télécharge le PDF et convertit en base64\n  let pdfBase64 = null;\n  try {\n    const pdfUrl = $('Code in JavaScript2').first().json.pdf_url;\n    const response = await this.helpers.httpRequest({\n      method: 'GET',\n      url: pdfUrl,\n      encoding: 'arraybuffer',\n      returnFullResponse: true,\n    });\n    pdfBase64 = Buffer.from(response.body).toString('base64');\n  } catch(e) {\n    console.log('Erreur PDF:', e.message);\n    pdfBase64 = null;\n  }\n\n  return {\n    name: data.name || \"\",\n    contact_name: data.contact_name || \"\",\n    email_from: data.email_from || \"\",\n    email_cc: data.email_cc || \"\",\n    phone: data.phone || \"\",\n    function: data.function || \"\",\n    street: data.street || \"\",\n    city: data.city || \"\",\n    zip: data.zip || \"\",\n    website: data.website || \"\",\n    date_deadline: data.date_deadline || \"\",\n    expected_revenue: expectedRevenue,\n    country_id: 76,\n    user_id: 2,\n    team_id: 1,\n    partner_id: 1,\n    business_unit_id: buId,\n    probability: 50,\n    Mode_de_livraison: \"01 Forfait\",\n    piste_source_id: $('Webhook').first().json.body.id,\n    pdf_base64: pdfBase64,\n    pdf_filename: `BOAMP_${$('Code in JavaScript2').first().json.idweb}.pdf`,\n  };\n}));\n\nreturn [{ json: { offers: offers } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        -880
+      ],
+      "id": "acbf8d22-89fc-494e-84bc-499abc0ad7cf",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Tu es un extracteur expert des avis d’attribution BOAMP.\n\nAnalyse les texte fourni et retourne UNIQUEMENT des JSON valide (sans markdown, sans backticks, sans explication).\n\nRespecte STRICTEMENT ces règles :\n\nAucune phrase hors JSON\n\nAucun commentaire\n\nAucun champ supplémentaire\n\nSi une donnée est absente → mettre une chaîne vide \"\"\n\nexpected_revenue doit être un nombre (sans espace, sans €, sans texte)\n\ndate_deadline format obligatoire YYYY-MM-DD\n\nphone doit contenir uniquement 10 chiffres sans espace\n\nzip doit contenir exactement 5 chiffres\n\nstreet ne doit PAS contenir le code postal ni la ville\n\nwebsite doit être une URL complète commençant par http et correcte \n\nLe champ business_unit_id doit être rempli automatiquement selon le type de marché :\n\n2 → Studia/Solutions : services IT, maintenance, solutions génériques\n\n3 → Studia/Digital : digital, web, application, plateforme, logiciel, e-commerce\n\n4 → Studia/Ingénierie : ingénierie, conception, construction, infrastructure, études techniques\n\n5 → Studia/Conseils : audit, conseil, stratégie, accompagnement, formation, assistance\n\nStructure attendue :\n{\n\"name\": \"objet complet du marché\",\n\"contact_name\": \"nom organisme acheteur seulement\",\n\"email_from\": \"email acheteur\",\n\"email_cc\": \"email titulaire\",\n\"phone\": \"telephone 10 chiffres\",\n\"function\": \"poste contact titulaire\",\n\"street\": \"rue acheteur sans CP ni ville\",\n\"city\": \"ville acheteur\",\n\"zip\": \"code postal 5 chiffres acheteur\",\n\"website\": \"URL profil acheteur complete\",\n\"date_deadline\": \"YYYY-MM-DD\",\n\"expected_revenue\": 0,\n\"titulaire\": \"nom du titulaire\",\n\"adresse_titulaire\": \"adresse complete titulaire\",\n\"business_unit_id\": 0\n}\n\nTexte :\n{{ $json.text }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        608,
+        -880
+      ],
+      "id": "42acfc2e-b7c2-4aef-8aeb-fc6ee181b598",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        656,
+        -736
+      ],
+      "id": "3ff917ce-d5e9-469e-b230-89055b8f30eb",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "QL3fBiFP3YLXnIW3",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.pdf_url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        64,
+        -784
+      ],
+      "id": "bf9d58a0-9546-4cbd-adb6-566ba3e11af7",
+      "name": "télécharge le PDF"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        []
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "télécharge le PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "télécharge le PDF": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "53d07252-c6ed-46dc-a279-8e2b45ece958",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
+  },
+  "id": "VFBG11bfu4eKD1ZwAfzM4",
+  "tags": []
+}
