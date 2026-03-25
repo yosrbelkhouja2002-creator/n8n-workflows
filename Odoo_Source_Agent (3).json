@@ -3,38 +3,6 @@
   "nodes": [
     {
       "parameters": {
-        "method": "POST",
-        "url": "http://host.docker.internal:8069/api/crm/lead/bulk_create",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "=Content-Type",
-              "value": "=application/json"
-            },
-            {
-              "name": "Authorization",
-              "value": "Bearer 24f572e1a8352e7ac7ac6f7554141e7d41d918ba"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={{ JSON.stringify($json) }}\n",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        1360,
-        -960
-      ],
-      "id": "004784df-0bcf-4eab-a54c-2141e4d1de40",
-      "name": "HTTP Request"
-    },
-    {
-      "parameters": {
         "httpMethod": "POST",
         "path": "piste-run",
         "options": {}
@@ -42,12 +10,172 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -416,
-        -928
+        -2240,
+        -1440
       ],
       "id": "1ae06655-d1b6-4b9a-9a44-2276a4ab7d46",
       "name": "Webhook",
       "webhookId": "06528e65-75c5-4715-bbb0-c86f78c902bc"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Tu es un extracteur expert des avis de marchés publics français (BOAMP).\nAnalyse le texte fourni qui contient DEUX sources : données API BOAMP structurées ET texte PDF.\nRetourne UNIQUEMENT un JSON valide (sans markdown, sans backticks, sans explication).\n\nRespecte STRICTEMENT ces règles :\n- Aucune phrase hors JSON\n- Aucun commentaire\n- Aucun champ supplémentaire\n- Si une donnée est absente → mettre une chaîne vide \"\"\n- expected_revenue doit être un nombre entier (sans espace, sans €, sans texte). Si 0 ou absent → mettre 1000\n- date_deadline format obligatoire YYYY-MM-DD. Cherche \"Date limite de réception des offres\" ou \"Date limite réponse\" ou \"datelimitereponse\"\n- phone doit contenir uniquement 10 chiffres sans espace. Convertir +33X en 0X\n- zip doit contenir exactement 5 chiffres\n- street ne doit PAS contenir le code postal ni la ville\n- website : prendre la valeur \"URL offre\" du texte. Elle commence toujours par https://www.boamp.fr\n- Pour email_from : prendre \"Adresse électronique\" ou \"Email\" ou \"Courriel\" de l'acheteur\n- Pour contact_name : prendre uniquement le nom court de l'organisme acheteur\n- Pour company_name : prendre le nom complet officiel de l'organisme acheteur\n- Pour titulaire : prendre le nom du titulaire si c'est un résultat de marché, sinon \"\"\n- Pour adresse_titulaire : adresse complète du titulaire si présente, sinon \"\"\n\nRègles business_unit_id — analyse l'objet ET la description du marché :\n2 → Studia/Solutions : services IT, maintenance, solutions génériques, hébergement, infrastructure\n3 → Studia/Digital : digital, web, application, plateforme, logiciel, e-commerce, SaaS, dématérialisé\n4 → Studia/Ingénierie : ingénierie, conception, construction, infrastructure, études techniques, travaux\n5 → Studia/Conseils : audit, conseil, stratégie, accompagnement, formation, assistance, gestion de portefeuille, finance\n\nPriorité des sources :\n- Les données \"=== ACHETEUR ===\" et \"=== DONNÉES BOAMP API ===\" sont prioritaires\n- Le texte \"=== TEXTE PDF ===\" complète les informations manquantes\n- En cas de conflit → toujours privilégier la section \"=== ACHETEUR ===\"\nAvant de retourner le JSON, vérifie :\n- Les mots-clés recherchés apparaissent dans le **titre** ou la **description du marché**, et dans un contexte lié au service ou produit.\n- Ignore les mots qui apparaissent seulement dans les noms de contacts, villes, emails, ou titulaires.\n- Si le marché ne correspond pas aux mots-clés  ne retourne PAS ce marché.\n- Si le marché correspond, retourne le JSON strictement selon la structure demandée.\nStructure attendue :\n{\n  \"name\": \"objet complet du marché\",\n  \"contact_name\": \"nom court organisme acheteur\",\n  \"company_name\": \"nom complet officiel de l'organisme acheteur\",\n  \"email_from\": \"email acheteur\",\n  \"email_cc\": \"email titulaire\",\n  \"phone\": \"telephone 10 chiffres\",\n  \"function\": \"poste contact titulaire\",\n  \"street\": \"rue acheteur sans CP ni ville\",\n  \"city\": \"ville acheteur\",\n  \"zip\": \"code postal 5 chiffres acheteur\",\n  \"website\": \"URL offre BOAMP\",\n  \"date_deadline\": \"YYYY-MM-DD\",\n  \"expected_revenue\": \"expected_revenue\",\n  \"titulaire\": \"nom du titulaire\",\n  \"adresse_titulaire\": \"adresse complete titulaire\",\n  \"business_unit_id\": \"business_unit_id\"\n}\n\nTexte :\n{{ $json.text }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        528,
+        -896
+      ],
+      "id": "42acfc2e-b7c2-4aef-8aeb-fc6ee181b598",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "={{ $('extraction les info').item.json.pdf_url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -240,
+        -1424
+      ],
+      "id": "bf9d58a0-9546-4cbd-adb6-566ba3e11af7",
+      "name": "télécharge le PDF"
+    },
+    {
+      "parameters": {
+        "jsCode": "// On prend tous les items du node précédent\nconst items = $input.all();\nreturn items.map((item, index) => {\n  const pdfText = item.json.text || \"\";\n  const api = $('Scrape BOAMP').all()[index]?.json.results?.[0] || {};\n\n  // Parse le champ donnees pour extraire les infos détaillées\n  let donnees = {};\n  try {\n    donnees = typeof api.donnees === \"string\" ? JSON.parse(api.donnees) : api.donnees;\n  } catch(e) {}\n\n  // Extrait les organisations\n  const notice = donnees?.EFORMS?.ContractNotice || {};\n  const efext = notice?.['ext:UBLExtensions']?.['ext:UBLExtension']?.['ext:ExtensionContent']?.['efext:EformsExtension'] || {};\n  const orgsRaw = efext?.['efac:Organizations']?.['efac:Organization'];\n  const orgs = Array.isArray(orgsRaw) ? orgsRaw : [orgsRaw];\n\n  // Prend le premier organisme (acheteur principal)\n  const org = orgs?.[0]?.['efac:Company'] || {};\n  const contact = org?.['cac:Contact'] || {};\n  const address = org?.['cac:PostalAddress'] || {};\n\n  // Projet principal\n  const project = notice?.['cac:ProcurementProject'] || {};\n  const lotProject = notice?.['cac:ProcurementProjectLot']?.['cac:ProcurementProject'] || {};\n\n  // Montant estimé\n  const montant = project?.['cac:RequestedTenderTotal']?.['cbc:EstimatedOverallContractAmount']?.['#text'] || \"\";\n\n  // Lots\n  const lotDesc = lotProject?.['cbc:Description']?.['#text'] || lotProject?.['cbc:Name']?.['#text'] || \"\";\n\n  // Construction du texte fusionné pour le LLM\n  const apiText = `=== DONNÉES BOAMP API ===\nObjet : ${api.objet || \"\"}\nAcheteur : ${api.nomacheteur || \"\"}\nNom complet organisme : ${org?.['cac:PartyName']?.['cbc:Name']?.['#text'] || \"\"}\nDate parution : ${api.dateparution || \"\"}\nDate limite réponse : ${api.datelimitereponse || \"\"}\nTitulaire : ${api.titulaire || \"\"}\nType procédure : ${api.procedure_libelle || \"\"}\nNature avis : ${api.nature_libelle || \"\"}\nURL avis : ${api.url_avis || \"\"}\n=== ACHETEUR ===\nTéléphone : ${contact?.['cbc:Telephone'] || \"\"}\nEmail : ${contact?.['cbc:ElectronicMail'] || \"\"}\nRue : ${address?.['cbc:StreetName'] || \"\"}\nVille : ${address?.['cbc:CityName'] || \"\"}\nCode postal : ${address?.['cbc:PostalZone'] || \"\"}\nPays : ${address?.['cac:Country']?.['cbc:IdentificationCode']?.['#text'] || \"\"}\nSite web acheteur : ${org?.['cbc:WebsiteURI'] || \"\"}\nProfil acheteur : ${org?.['cbc:EndpointID'] || notice?.['cac:ContractingParty']?.['cbc:BuyerProfileURI'] || \"\"}\n=== MARCHÉ ===\nTitre : ${project?.['cbc:Name']?.['#text'] || \"\"}\nDescription : ${project?.['cbc:Description']?.['#text'] || \"\"}\nMontant estimé : ${montant}\nDescription lot : ${lotDesc}\n=== TEXTE PDF ===\n${pdfText}`;\n\n  return {\n    json: {\n      idweb: api.idweb || \"\",   // ← ajouté ici\n      text: apiText\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        -1280
+      ],
+      "id": "a080b9ce-2c48-4461-82ff-72064e24943b",
+      "name": "Fusion textes"
+    },
+    {
+      "parameters": {
+        "url": "=https://boamp-datadila.opendatasoft.com/api/explore/v2.1/catalog/datasets/boamp/records?where=idweb%3D%22{{ $json.idweb }}%22&limit=1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -368,
+        -1360
+      ],
+      "id": "b7662fcc-3e04-490a-95d6-8edc462510b8",
+      "name": "Scrape BOAMP"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -2224,
+        -1216
+      ],
+      "id": "b620b263-8b2c-44fd-811f-a2aafde7b193",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8069/api/piste/auto_sources",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 24f572e1a8352e7ac7ac6f7554141e7d41d918ba"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1952,
+        -1168
+      ],
+      "id": "27497672-d810-4602-a52f-4ce424ed6f1c",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const scheduleData = $('Schedule Trigger').first().json;\nconst currentHour = parseInt(scheduleData['Hour']);\nconst currentMinute = parseInt(scheduleData['Minute']);\n\n// ✅ Crée \"now\" en heure locale depuis le Schedule Trigger\nconst now = new Date();\nconst nowLocal = new Date(now.getTime() + 60 * 60 * 1000); // UTC+1\n\nfunction shouldRun(s) {\n  if (!s.frequency) return false;\n\n  if (s.date_end && new Date(s.date_end + 'T23:59:59') < nowLocal) return false;\n  if (s.date_start && new Date(s.date_start + 'T00:00:00') > nowLocal) return false;\n\n  if (s.time) {\n    const parts = s.time.split(':');\n    const configH = parseInt(parts[0]);\n    if (!isNaN(configH) && currentHour !== configH) return false;\n  }\n\n  const lastRun = s.last_run ? new Date(s.last_run) : new Date(0);\n  const diffHours = (nowLocal - lastRun) / (1000 * 60 * 60);\n\n  if (s.frequency === 'daily') return diffHours >= 20;\n  if (s.frequency === 'weekly') return diffHours >= 144;\n  if (s.frequency === 'custom') {\n    const interval = s.interval || 1;\n    if (s.unit === 'hours') return diffHours >= interval * 0.9;\n    if (s.unit === 'days') return diffHours >= interval * 24 * 0.9;\n    if (s.unit === 'weeks') return diffHours >= interval * 24 * 7 * 0.9;\n    if (s.unit === 'months') return diffHours >= interval * 24 * 30 * 0.9;\n  }\n  return false;\n}\n\nconst sources = $input.first().json.sources || [];\nconst toRun = sources.filter(shouldRun);\n\nif (toRun.length === 0) {\n  return [{ json: { \n    message: \"Aucune veille à lancer\", \n    skip: true, \n    checked_at: nowLocal.toISOString(),\n    currentHour: currentHour\n  }}];\n}\n\nreturn toRun.map(s => ({ json: s }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1776,
+        -1152
+      ],
+      "id": "e26170d3-c1cc-4336-b1ff-08006feea312",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2d5aa8c8-3b75-4e6a-957e-04da46c4a6f9",
+              "name": "queryString",
+              "value": "={{ $json.keywords_required }}",
+              "type": "string"
+            },
+            {
+              "id": "966120d3-546a-4706-9594-756783baf0d9",
+              "name": "type",
+              "value": "Services",
+              "type": "string"
+            },
+            {
+              "id": "f8162309-ffbb-45b2-b8b3-b95f6765641f",
+              "name": "department",
+              "value": 5,
+              "type": "number"
+            },
+            {
+              "id": "bcd67b38-35a8-482b-bfef-c9d9a87d2224",
+              "name": "rows",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "390ab630-35ad-4c68-a316-3ef0d4ce5851",
+              "name": "",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1184,
+        -1312
+      ],
+      "id": "1861cbed-2ed0-4231-8cf1-b24f9b1fed09",
+      "name": "extraction et validation de la configuration"
     },
     {
       "parameters": {
@@ -78,6 +206,10 @@
             {
               "name": "refine.code_departement",
               "value": "75"
+            },
+            {
+              "name": "start ",
+              "value": "={{$json[\"start\"] || 0}}"
             }
           ]
         },
@@ -86,77 +218,24 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -304,
-        -544
+        -800,
+        -1296
       ],
       "id": "176ba973-0e53-4668-9140-459b8fc8b2e1",
-      "name": "HTTP Request2"
+      "name": "appel API BOAMP"
     },
     {
       "parameters": {
-        "jsCode": "const records = $input.first().json.records;\n\nreturn records.map(record => ({\n  json: {\n    idweb: record.fields.idweb,\n    objet: record.fields.objet,\n    acheteur: record.fields.nomacheteur,\n    dateparution: record.fields.dateparution,\n    datelimitereponse: record.fields.datelimitereponse || \"\",\n    departement: record.fields.code_departement,\n    url_avis: record.fields.url_avis,\n    pdf_url: `https://www.boamp.fr/telechargements/FILES/PDF/${record.fields.dateparution.substring(0,4)}/${record.fields.dateparution.substring(5,7)}/${record.fields.idweb}.pdf`\n  }\n}));"
+        "jsCode": "// Récupérer le static data global\nconst workflowData = $getWorkflowStaticData('global');\nconst processedIds = workflowData.processedIds || [];\n\n// Récupérer les records\nconst records = $input.first().json.records;\n\n// Filtrer les records déjà traités\nconst newRecords = records.filter(record => !processedIds.includes(record.fields.idweb));\n\n// Mettre à jour processedIds\nworkflowData.processedIds = [...processedIds, ...newRecords.map(r => r.fields.idweb)];\n\n// Mapper les records pour le workflow\nreturn newRecords.map(record => ({\n  json: {\n    idweb: record.fields.idweb,\n    objet: record.fields.objet,\n    acheteur: record.fields.nomacheteur,\n    dateparution: record.fields.dateparution,\n    datelimitereponse: record.fields.datelimitereponse || \"\",\n    departement: record.fields.code_departement,\n    url_avis: record.fields.url_avis,\n    pdf_url: `https://www.boamp.fr/telechargements/FILES/PDF/${record.fields.dateparution.substring(0,4)}/${record.fields.dateparution.substring(5,7)}/${record.fields.idweb}.pdf`\n  }\n}));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -144,
-        -688
+        -592,
+        -1376
       ],
       "id": "d789bedb-ba45-44b8-98a0-835981cd4037",
-      "name": "Code in JavaScript2"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "2d5aa8c8-3b75-4e6a-957e-04da46c4a6f9",
-              "name": "queryString",
-              "value": "={{ $json.body.keywords_required[0] }} AND (informatique OR logiciel OR système OR numérique OR digital OR IT OR application)",
-              "type": "string"
-            },
-            {
-              "id": "966120d3-546a-4706-9594-756783baf0d9",
-              "name": "type",
-              "value": "Services",
-              "type": "string"
-            },
-            {
-              "id": "f8162309-ffbb-45b2-b8b3-b95f6765641f",
-              "name": "department",
-              "value": 5,
-              "type": "number"
-            },
-            {
-              "id": "bcd67b38-35a8-482b-bfef-c9d9a87d2224",
-              "name": "rows",
-              "value": 1,
-              "type": "number"
-            },
-            {
-              "id": "b0615d07-ff47-4a05-8cac-640ecdf73bf3",
-              "name": "dataset",
-              "value": "={{ $json.body.platforms.boamp }}",
-              "type": "boolean"
-            },
-            {
-              "id": "390ab630-35ad-4c68-a316-3ef0d4ce5851",
-              "name": "",
-              "value": "",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        -464,
-        -608
-      ],
-      "id": "1861cbed-2ed0-4231-8cf1-b24f9b1fed09",
-      "name": "Edit Fields"
+      "name": "extraction les info"
     },
     {
       "parameters": {
@@ -166,39 +245,588 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1.1,
       "position": [
-        304,
-        -1072
+        -144,
+        -1280
       ],
       "id": "932d93a1-80ed-46ac-bb91-b366df8ced4a",
-      "name": "Extract from File"
+      "name": "extraction du texte du PDF"
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst offers = await Promise.all(items.map(async item => {\n  const raw = item.json.text;\n  const data = typeof raw === \"string\" ? JSON.parse(raw) : raw;\n\n  let expectedRevenue = Number(data.expected_revenue);\n  if (!expectedRevenue || expectedRevenue <= 0) expectedRevenue = 1000;\n\n  let buId = Number(data.business_unit_id);\n  if (!buId || ![2,3,4,5].includes(buId)) buId = 3;\n\n  // ✅ URL offre BOAMP construite depuis idweb\n  const idweb = $('Code in JavaScript2').first().json.idweb;\n  const urlOffre = `https://www.boamp.fr/pages/avis/?q=idweb:\"${idweb}\"`;\n\n  // ✅ Télécharge le PDF et convertit en base64\n  let pdfBase64 = null;\n  try {\n    const pdfUrl = $('Code in JavaScript2').first().json.pdf_url;\n    const response = await this.helpers.httpRequest({\n      method: 'GET',\n      url: pdfUrl,\n      encoding: 'arraybuffer',\n      returnFullResponse: true,\n    });\n    pdfBase64 = Buffer.from(response.body).toString('base64');\n  } catch(e) {\n    console.log('Erreur PDF:', e.message);\n    pdfBase64 = null;\n  }\n\n  return {\n    name: data.name || \"\",\n    contact_name: data.contact_name || \"\",\n    email_from: data.email_from || \"\",\n    email_cc: data.email_cc || \"\",\n    phone: data.phone || \"\",\n    function: data.function || \"\",\n    street: data.street || \"\",\n    city: data.city || \"\",\n    zip: data.zip || \"\",\n    company_name: data.company_name || \"\",\n    website: urlOffre,  // ✅ URL BOAMP directe, pas celle du LLM\n    date_deadline: data.date_deadline || \"\",\n    expected_revenue: expectedRevenue,\n    country_id: 75,\n    source_id: 11,\n    user_id: 2,\n    team_id: 1,\n    partner_id: 1,\n    business_unit_id: data.business_unit_id, \n    probability: 50,\n    Mode_de_livraison: \"01 Forfait\",\n    piste_source_id: $('Webhook').first().json.body.id,\n    pdf_base64: pdfBase64,\n    pdf_filename: `BOAMP_${idweb}.pdf`,\n  };\n}));\n\n\nreturn [{ json: { offers: offers } }];"
+        "jsCode": "const items = $input.all();\nconst offers = await Promise.all(items.map(async item => {\n  const raw = item.json.text;\n  const data = typeof raw === \"string\" ? JSON.parse(raw) : raw;\n\n  let expectedRevenue = Number(data.expected_revenue);\n  if (!expectedRevenue || expectedRevenue <= 0) expectedRevenue = 1000;\n\n  let buId = Number(data.business_unit_id);\n  if (!buId || ![2,3,4,5].includes(buId)) buId = 3;\n\n  // ✅ URL offre BOAMP construite depuis idweb\n  const idweb = $('extraction les info').first().json.idweb;\n  const urlOffre = `https://www.boamp.fr/pages/avis/?q=idweb:\"${idweb}\"`;\n\n  // ✅ Télécharge le PDF et convertit en base64\n  let pdfBase64 = null;\n  try {\n    const pdfUrl = $('extraction les info').first().json.pdf_url;\n    const response = await this.helpers.httpRequest({\n      method: 'GET',\n      url: pdfUrl,\n      encoding: 'arraybuffer',\n      returnFullResponse: true,\n    });\n    pdfBase64 = Buffer.from(response.body).toString('base64');\n  } catch(e) {\n    console.log('Erreur PDF:', e.message);\n    pdfBase64 = null;\n  }\n\n  return {\n    name: data.name || \"\",\n    contact_name: data.contact_name || \"\",\n    email_from: data.email_from || \"\",\n    email_cc: data.email_cc || \"\",\n    phone: data.phone || \"\",\n    function: data.function || \"\",\n    street: data.street || \"\",\n    city: data.city || \"\",\n    zip: data.zip || \"\",\n    company_name: data.company_name || \"\",\n    website: urlOffre,  // ✅ URL BOAMP directe, pas celle du LLM\n    date_deadline: data.date_deadline || \"\",\n    expected_revenue: expectedRevenue,\n    country_id: 75,\n    source_id: 11,\n    user_id: 2,\n    team_id: 1,\n    partner_id: 1,\n    business_unit_id: data.business_unit_id, \n    probability: 50,\n    Mode_de_livraison: \"01 Forfait\",\n    piste_source_id: (() => {\n  try { return $('Webhook').first().json.body.id; } catch(e) {}\n  try { return $('shouldRun').first().json.id; } catch(e) {}\n  return null;\n})(),\n    pdf_base64: pdfBase64,\n    pdf_filename: `BOAMP_${idweb}.pdf`,\n  };\n}));\n\n\nreturn [{ json: { offers: offers } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1104,
-        -976
+        816,
+        -896
       ],
       "id": "acbf8d22-89fc-494e-84bc-499abc0ad7cf",
-      "name": "Code in JavaScript3"
+      "name": "structurée la rep llm"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8069/api/crm/lead/bulk_create",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "=Content-Type",
+              "value": "=application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer 24f572e1a8352e7ac7ac6f7554141e7d41d918ba"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json) }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1120,
+        -1008
+      ],
+      "id": "004784df-0bcf-4eab-a54c-2141e4d1de40",
+      "name": "envoi des leads à l'API Odoo"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7d48d842-3320-4999-8b4d-487c2ba05c34",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "manual",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1632,
+        -1120
+      ],
+      "id": "ba3aec50-ac40-494b-8aa0-66926eed2031",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "89ddba4e-a204-4633-8748-f61abb63c665",
+              "leftValue": "={{ $json.body.automation_type }}",
+              "rightValue": "manual",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -2096,
+        -1456
+      ],
+      "id": "c41a5dfb-2e5b-4750-92f6-12d6ab3351b1",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const llmResponse = item.json.text || \"\";\n  const [status, reason] = llmResponse.split('|');\n  const isValid = status.trim().toUpperCase() === 'VALIDE';\n  \n  return {\n    json: {\n      ...item.json,\n      isValid: isValid,\n      filterReason: reason ? reason.trim() : 'Pas de raison fournie'\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        -1200
+      ],
+      "id": "e4522e6b-9b7e-4d41-a038-5b6f763c019e",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a373d839-ec93-4f18-bb7f-0ec439559498",
+              "leftValue": "={{ $json.isValid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        48,
+        -912
+      ],
+      "id": "67bbac93-739e-4c83-9d3b-573ddfbd0cc7",
+      "name": "If2"
     },
     {
       "parameters": {
         "promptType": "define",
-        "text": "=Tu es un extracteur expert des avis de marchés publics français (BOAMP).\nAnalyse le texte fourni qui contient DEUX sources : données API BOAMP structurées ET texte PDF.\nRetourne UNIQUEMENT un JSON valide (sans markdown, sans backticks, sans explication).\n\nRespecte STRICTEMENT ces règles :\n- Aucune phrase hors JSON\n- Aucun commentaire\n- Aucun champ supplémentaire\n- Si une donnée est absente → mettre une chaîne vide \"\"\n- expected_revenue doit être un nombre entier (sans espace, sans €, sans texte). Si 0 ou absent → mettre 1000\n- date_deadline format obligatoire YYYY-MM-DD. Cherche \"Date limite de réception des offres\" ou \"Date limite réponse\" ou \"datelimitereponse\"\n- phone doit contenir uniquement 10 chiffres sans espace. Convertir +33X en 0X\n- zip doit contenir exactement 5 chiffres\n- street ne doit PAS contenir le code postal ni la ville\n- website : prendre la valeur \"URL offre\" du texte. Elle commence toujours par https://www.boamp.fr\n- Pour email_from : prendre \"Adresse électronique\" ou \"Email\" ou \"Courriel\" de l'acheteur\n- Pour contact_name : prendre uniquement le nom court de l'organisme acheteur\n- Pour company_name : prendre le nom complet officiel de l'organisme acheteur\n- Pour titulaire : prendre le nom du titulaire si c'est un résultat de marché, sinon \"\"\n- Pour adresse_titulaire : adresse complète du titulaire si présente, sinon \"\"\n\nRègles business_unit_id — analyse l'objet ET la description du marché :\n2 → Studia/Solutions : services IT, maintenance, solutions génériques, hébergement, infrastructure\n3 → Studia/Digital : digital, web, application, plateforme, logiciel, e-commerce, SaaS, dématérialisé\n4 → Studia/Ingénierie : ingénierie, conception, construction, infrastructure, études techniques, travaux\n5 → Studia/Conseils : audit, conseil, stratégie, accompagnement, formation, assistance, gestion de portefeuille, finance\n\nPriorité des sources :\n- Les données \"=== ACHETEUR ===\" et \"=== DONNÉES BOAMP API ===\" sont prioritaires\n- Le texte \"=== TEXTE PDF ===\" complète les informations manquantes\n- En cas de conflit → toujours privilégier la section \"=== ACHETEUR ===\"\n\nStructure attendue :\n{\n  \"name\": \"objet complet du marché\",\n  \"contact_name\": \"nom court organisme acheteur\",\n  \"company_name\": \"nom complet officiel de l'organisme acheteur\",\n  \"email_from\": \"email acheteur\",\n  \"email_cc\": \"email titulaire\",\n  \"phone\": \"telephone 10 chiffres\",\n  \"function\": \"poste contact titulaire\",\n  \"street\": \"rue acheteur sans CP ni ville\",\n  \"city\": \"ville acheteur\",\n  \"zip\": \"code postal 5 chiffres acheteur\",\n  \"website\": \"URL offre BOAMP\",\n  \"date_deadline\": \"YYYY-MM-DD\",\n  \"expected_revenue\": 0,\n  \"titulaire\": \"nom du titulaire\",\n  \"adresse_titulaire\": \"adresse complete titulaire\",\n  \"business_unit_id\": \"business_unit_id\"\n}\n\nTexte :\n{{ $json.text }}",
+        "text": "=Tu es un expert en appels d’offres publics français. \n\nCRITÈRES : \n- Mot-clé cible : {{ $('Webhook').item.json.body.keywords_required[0] }}\n\nOFFRES À ANALYSER (une offre par item) :\n- Titre et texte complet : {{ $json.text }}\n\nINSTRUCTIONS :\nINSTRUCTIONS :\n1. Le mot-clé doit correspondre à l'OBJET PRINCIPAL du marché.\n2. REJETTE automatiquement si le mot-clé apparaît uniquement dans :\n   - Les conditions administratives ou de participation\n   - Les clauses contractuelles génériques\n   - Les coordonnées (noms, emails, adresses, SIRET)\n   - Un contexte accessoire ou secondaire au marché\n3. VALIDE uniquement si le marché a pour objet DIRECT et PRINCIPAL la prestation liée au mot-clé.\n4. En cas de doute, REJETTE.\n5. Vérifie si le contenu de l’offre correspond strictement au sens exact du mot-clé cible.\n6. Ignore les occurrences qui se trouvent dans : \n   - Noms, emails, adresses, villes, codes postaux, SIRET, titulaires, dates.\n7. Ignore les mentions non pertinentes contenant le mot-clé (ex : “données” dans le nom du contact ne compte pas).\n8. Prends en compte **le contexte complet** :\n   - Titre du marché\n   - Objet du marché{{ $('appel API BOAMP').item.json.records[0].fields.objet }}\n   - Description succincte{{ $('appel API BOAMP').item.json.records[0].fields.url_avis }}\n   - Description PDF\n9. Base ta validation uniquement sur le contenu réel du marché (services demandés, prestations, objectifs).\n10. Réponds strictement sous ce format :\n   - Si l'offre est pertinente :\n     VALIDE|raison|{{ $json.idweb }}\n   - Si l'offre est rejetée :\n     REJETÉ|raison|{{ $json.idweb }}\n\n⚠️ EXEMPLES DE SORTIE :\n\nVALIDE|Le marché traite bien de \"gestion de données\" et concerne la collecte, le traitement ou la gouvernance de données.\nREJETÉ|Le marché parle de paie et ressources humaines, pas de \"gestion de données\".|26-20270",
         "batching": {}
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.9,
       "position": [
-        720,
-        -1104
+        400,
+        -1472
       ],
-      "id": "42acfc2e-b7c2-4aef-8aeb-fc6ee181b598",
-      "name": "Basic LLM Chain"
+      "id": "91ffdc68-4389-46e5-9bd6-a7eb25a30ef9",
+      "name": "analyse les offre vs au mot-clé",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "batchSize": 2,
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -848,
+        -1040
+      ],
+      "id": "5f00f82d-dccc-48fa-a29a-756cd7b4fb50",
+      "name": "Loop Over Items1",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": "mistral:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        496,
+        -688
+      ],
+      "id": "f79881e5-059d-4785-bfe8-5ea2f53c0ce9",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "i0WjY6OzD1qQ3V2U",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const llmItems = $input.all();\nconst originalItems = $('Fusion textes').all();\n\n// Dictionnaire idweb → données originales\nconst originalByIdweb = {};\noriginalItems.forEach(item => {\n  if (item.json.idweb) originalByIdweb[item.json.idweb] = item.json;\n});\n\nconst result = [];\n\nllmItems.forEach(item => {\n  const text = item.json.text || \"\";\n  const parts = text.split('|');\n  const status = parts[0].trim().toUpperCase();\n\n  if (status === 'VALIDE') {\n    const idweb = parts[2]?.trim();\n    const original = originalByIdweb[idweb] || {};\n\n    result.push({\n      json: {\n        ...original,        // tout le texte original de l'offre\n        isValid: true,\n        filterReason: parts[1] ? parts[1].trim() : 'Pas de raison fournie'\n      }\n    });\n  }\n});\n\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        -960
+      ],
+      "id": "19602a76-74bd-43bc-a73c-ea251be018a4",
+      "name": "offre valide"
+    },
+    {
+      "parameters": {
+        "model": "mistral:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        352,
+        -1200
+      ],
+      "id": "f72d89f4-3390-4ba8-b68a-f51adfcd0fb6",
+      "name": "Ollama Chat Model1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "i0WjY6OzD1qQ3V2U",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst platforms = body.platforms;\n\n// Garde uniquement les plateformes activées (true)\nconst activePlatforms = Object.entries(platforms)\n  .filter(([, enabled]) => enabled === true)\n  .map(([source]) => source);\n\nif (activePlatforms.length === 0) {\n  throw new Error(\"Aucune plateforme activée dans la config Odoo\");\n}\n\n// 1 item par plateforme activée, chacun porte toute la config\nreturn activePlatforms.map(source => ({\n  json: {\n    source,\n    keywords_required: body.keywords_required,\n    geo_zones:         body.geo_zones,\n    geo_regions:       body.geo_regions,\n    budget_min:        body.budget_min,\n    budget_max:        body.budget_max,\n    duration_short:    body.duration_short,\n    duration_medium:   body.duration_medium,\n    duration_long:     body.duration_long,\n    client_pme:        body.client_pme,\n    client_large:      body.client_large,\n    notify_odoo:       body.notify_odoo,\n    piste_id:          body.id,\n    piste_name:        body.name,\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1904,
+        -1536
+      ],
+      "id": "5b824681-aaa5-4a4d-9f3d-f67e9536f0a0",
+      "name": "Filtre par source"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.source }}",
+                    "rightValue": "={{ $json.source }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "91ac6c88-9581-47f1-affd-b1825e8d8082"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -1744,
+        -1504
+      ],
+      "id": "e060d7db-cba9-47a3-b9c3-5d764bec49f7",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst keyword = input.keywords_required[0];\n\nconst slug = keyword\n  .toLowerCase()\n  .normalize(\"NFD\")\n  .replace(/[\\u0300-\\u036f]/g, \"\")\n  .replace(/\\s+/g, \"-\")\n  .replace(/[^a-z0-9-]/g, \"\");\n\nconst targetUrl = `https://www.francemarches.com/appels-offre/${slug}`;\n\nreturn [{\n  json: {\n    ...input,\n    fm_keyword_slug: slug,\n    fm_url_liste: targetUrl,\n    fm_base_url: \"https://www.francemarches.com\"\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1328,
+        -2208
+      ],
+      "id": "9a2700f5-2dbc-4117-8763-734366180331",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.fm_url_liste }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+            },
+            {
+              "name": "Accept-Language",
+              "value": "fr-FR,fr;q=0.9,en;q=0.8"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"q\": \"informatique\",\n  \"rows\": 1,\n  \"start\": 0,\n  \"refine\": {\n    \"etat\": \"INITIAL\",\n    \"dateparution\": \"2026/02\",\n    \"code_departement\": \"75\"\n  },\n  \"format\": \"json\",\n  \"timezone\": \"UTC\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1072,
+        -2208
+      ],
+      "id": "085a4390-eecd-4019-a0b4-ac40baaa9639",
+      "name": "FranceMarches"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "834b59bf-d00a-44ad-b291-8bc522f809fb",
+              "leftValue": "={{ $json.source }}",
+              "rightValue": "=marchespublics",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1584,
+        -1504
+      ],
+      "id": "a4507e17-de4c-4395-b047-4df66121eda1",
+      "name": "marchespublics ?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c535381a-ba1f-4a2a-b4c1-7e97a02aacb2",
+              "leftValue": "={{ $json.source }}",
+              "rightValue": "boamp",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1408,
+        -1424
+      ],
+      "id": "25957ad5-a317-4b38-830c-60721e6b2993",
+      "name": "boamp ?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a9361d25-18b8-4c6c-a83a-aedfa17dc3ca",
+              "leftValue": "={{ $json.source }}",
+              "rightValue": "awsolutions",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1280,
+        -2000
+      ],
+      "id": "558215b2-ef48-4372-8a00-12c3e6d478df",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.marches-publics.info/Annonces/lister",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+            },
+            {
+              "name": "Referer",
+              "value": "https://awsolutions.fr/Annonces/avancee.htm"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            },
+            {
+              "name": "Origin",
+              "value": "https://awsolutions.fr"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "IDE",
+              "value": "EC"
+            },
+            {
+              "name": "IDN",
+              "value": "X"
+            },
+            {
+              "name": "IDR",
+              "value": "X"
+            },
+            {
+              "name": "txtLibre",
+              "value": "={{ $json.keywords_required[0] }}"
+            },
+            {
+              "name": "dateParution ",
+              "value": "== < 30"
+            },
+            {
+              "name": "Recherche ",
+              "value": "Recherche "
+            },
+            {
+              "name": "listeCPV"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1120,
+        -1936
+      ],
+      "id": "0432a6a9-137f-4250-81e5-b551766f796b",
+      "name": "Scrap aws"
+    },
+    {
+      "parameters": {
+        "jsCode": "const keyword = $input.first().json.keywords_required[0];\n\n// ── Étape 1 : GET pour récupérer le cookie de session ──\nconst getResponse = await this.helpers.httpRequest({\n  method: 'GET',\n  url: 'https://awsolutions.fr/Annonces/avancee.htm',\n  returnFullResponse: true,\n  headers: {\n    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',\n    'Accept': 'text/html,application/xhtml+xml',\n    'Accept-Language': 'fr-FR,fr;q=0.9',\n  }\n});\n\n// Extraire les cookies de la réponse GET\nconst rawCookies = getResponse.headers['set-cookie'] || [];\nconst cookieString = (Array.isArray(rawCookies) ? rawCookies : [rawCookies])\n  .map(c => c.split(';')[0])\n  .join('; ');\n\n// ── Étape 2 : POST avec le cookie ──\nconst postResponse = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://awsolutions.fr/Annonces/lister',\n  returnFullResponse: true,\n  headers: {\n    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',\n    'Accept': 'text/html,application/xhtml+xml',\n    'Accept-Language': 'fr-FR,fr;q=0.9',\n    'Content-Type': 'application/x-www-form-urlencoded',\n    'Referer': 'https://awsolutions.fr/Annonces/avancee.htm',\n    'Origin': 'https://awsolutions.fr',\n    'Cookie': cookieString,\n  },\n  body: new URLSearchParams({\n    IDE: 'EC',\n    IDN: 'X',\n    IDP: 'X',\n    IDR: 'X',\n    listeCPV: '',\n    txtLibre: keyword,\n    dateParution: ' < 8',\n    Rechercher: 'Rechercher',\n  }).toString(),\n});\n\nreturn [{\n  json: {\n    ...$input.first().json,\n    html: postResponse.body,\n    status: postResponse.statusCode,\n    cookie_used: cookieString,\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -976,
+        -2016
+      ],
+      "id": "db67ad8f-92ba-4ceb-81b3-02c22b93b85a",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "70e95241-1377-4cdb-8f3d-2981a9786270",
+              "leftValue": "={{ $json.source }}",
+              "rightValue": "marchessecurise",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1152,
+        -1600
+      ],
+      "id": "8b7a9dba-4f03-4487-91c1-ae37e9095d6b",
+      "name": "marches securise"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Tu es un expert en appels d'offres publics français.\n\nCRITÈRES :\n- Mot-clé cible : {{ $('Webhook').item.json.body.keywords_required[0] }}\n\nOFFRES À ANALYSER :\n- Acheteur : {{ $('pdf').item.json.acheteur }}\n- Objet du marché : {{ $('pdf').item.json.objet }}\n- Description complète (PDF) : {{ $json.text }}\n- Type de marché : {{ $('pdf').item.json.typeMarche }}\n- Procédure : {{ $('pdf').item.json.procedure }}\n- Zone géographique : {{ $('pdf').item.json.zone }}\nINSTRUCTIONS :\n1. Le mot-clé doit correspondre à l'OBJET PRINCIPAL du marché.\n2. REJETTE automatiquement si le mot-clé apparaît uniquement dans :\n   - Les conditions administratives ou de participation\n   - Les clauses contractuelles génériques\n   - Les coordonnées (noms, emails, adresses, SIRET)\n   - Un contexte accessoire ou secondaire au marché\n3. VALIDE uniquement si le marché a pour objet DIRECT et PRINCIPAL la prestation liée au mot-clé.\n4. En cas de doute, REJETTE.\n5. Vérifie si le contenu de l'offre correspond strictement au sens exact du mot-clé cible.\n6. Ignore les occurrences qui se trouvent dans :\n   - Noms, emails, adresses, villes, codes postaux, SIRET, titulaires, dates.\n7. Ignore les mentions non pertinentes contenant le mot-clé.\n8. Prends en compte le contexte complet :\n   - Objet : {{ $('pdf').item.json.objet }}\n   - Description PDF : {{ $json.text }}\n   - Type : {{ $('pdf').item.json.typeMarche }}\n9. Base ta validation uniquement sur le contenu réel du marché.\n10. Réponds strictement sous ce format :\n    - Si pertinente : VALIDE|raison|{{ $('pdf').item.json.cle_dce }}\n    - Si rejetée : REJETÉ|raison|{{ $('pdf').item.json.cle_dce }}\n⚠️ EXEMPLES DE SORTIE :\nVALIDE|Le marché traite bien de \"développement informatique\" et concerne la réalisation d'une application mobile.|1769165209vgjvifffunk1\nREJETÉ|Le marché concerne des travaux de CVC, le mot-clé informatique apparaît uniquement dans le nom du service.|1538690665o1tv5rpoutni\n\n\n⚠️ IMPORTANT : Réponds UNIQUEMENT avec la ligne de résultat. \nPas d'introduction, pas d'explication avant. \nJuste : VALIDE|raison|cle_dce  OU  REJETÉ|raison|cle_dce",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -112,
+        -1792
+      ],
+      "id": "c31294b7-397f-4ffc-8833-8e050ca67ee5",
+      "name": "Basic LLM Chain1"
     },
     {
       "parameters": {
@@ -207,10 +835,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
-        720,
-        -912
+        -1072,
+        -592
       ],
-      "id": "3ff917ce-d5e9-469e-b230-89055b8f30eb",
+      "id": "fe18f8dc-785a-4d1b-aef5-e780e9d08a38",
       "name": "Google Gemini Chat Model",
       "credentials": {
         "googlePalmApi": {
@@ -221,44 +849,171 @@
     },
     {
       "parameters": {
-        "url": "={{ $('Code in JavaScript2').item.json.pdf_url }}",
+        "model": "mistral:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmOllama",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        -1632
+      ],
+      "id": "d0d2a224-9af7-4c60-bfe0-bf7ddb9ae4d1",
+      "name": "Ollama Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "i0WjY6OzD1qQ3V2U",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://www.marches-securises.fr/entreprise/",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "module",
+              "value": "liste_consultations"
+            },
+            {
+              "name": "r",
+              "value": "={{ $json.keywords_required[0] }}"
+            },
+            {
+              "name": "presta",
+              "value": ";services;travaux;fournitures;autres"
+            },
+            {
+              "name": "date_cloture_type",
+              "value": "0"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml"
+            }
+          ]
+        },
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        784,
-        -688
+        -832,
+        -1792
       ],
-      "id": "bf9d58a0-9546-4cbd-adb6-566ba3e11af7",
-      "name": "télécharge le PDF"
+      "id": "3e7a4074-70c0-4ce6-aa96-8a8edcdf3612",
+      "name": "Scrape marche securises"
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\n\nconst pdfText = item.json.text || \"\";\n\nconst api = $('Scrape BOAMP').first().json.results?.[0] || {};\n\n// Parse le champ donnees pour extraire les infos détaillées\nlet donnees = {};\ntry {\n  donnees = typeof api.donnees === \"string\" ? JSON.parse(api.donnees) : api.donnees;\n} catch(e) {}\n\n// Extrait les organisations\nconst notice = donnees?.EFORMS?.ContractNotice || {};\nconst efext = notice?.['ext:UBLExtensions']?.['ext:UBLExtension']?.['ext:ExtensionContent']?.['efext:EformsExtension'] || {};\nconst orgsRaw = efext?.['efac:Organizations']?.['efac:Organization'];\nconst orgs = Array.isArray(orgsRaw) ? orgsRaw : [orgsRaw];\n\n// Prend le premier organisme (acheteur principal)\nconst org = orgs?.[0]?.['efac:Company'] || {};\nconst contact = org?.['cac:Contact'] || {};\nconst address = org?.['cac:PostalAddress'] || {};\n\n// Projet principal\nconst project = notice?.['cac:ProcurementProject'] || {};\nconst lotProject = notice?.['cac:ProcurementProjectLot']?.['cac:ProcurementProject'] || {};\n\n// Montant estimé\nconst montant = project?.['cac:RequestedTenderTotal']?.['cbc:EstimatedOverallContractAmount']?.['#text'] || \"\";\n\n// Lots\nconst lotDesc = lotProject?.['cbc:Description']?.['#text'] || lotProject?.['cbc:Name']?.['#text'] || \"\";\n\nconst apiText = `=== DONNÉES BOAMP API ===\nObjet : ${api.objet || \"\"}\nAcheteur : ${api.nomacheteur || \"\"}\nNom complet organisme : ${org?.['cac:PartyName']?.['cbc:Name']?.['#text'] || \"\"}\nDate parution : ${api.dateparution || \"\"}\nDate limite réponse : ${api.datelimitereponse || \"\"}\nTitulaire : ${api.titulaire || \"\"}\nType procédure : ${api.procedure_libelle || \"\"}\nNature avis : ${api.nature_libelle || \"\"}\nURL avis : ${api.url_avis || \"\"}\n\n=== ACHETEUR ===\nTéléphone : ${contact?.['cbc:Telephone'] || \"\"}\nEmail : ${contact?.['cbc:ElectronicMail'] || \"\"}\nRue : ${address?.['cbc:StreetName'] || \"\"}\nVille : ${address?.['cbc:CityName'] || \"\"}\nCode postal : ${address?.['cbc:PostalZone'] || \"\"}\nPays : ${address?.['cac:Country']?.['cbc:IdentificationCode']?.['#text'] || \"\"}\nSite web acheteur : ${org?.['cbc:WebsiteURI'] || \"\"}\nProfil acheteur : ${org?.['cbc:EndpointID'] || notice?.['cac:ContractingParty']?.['cbc:BuyerProfileURI'] || \"\"}\n\n=== MARCHÉ ===\nTitre : ${project?.['cbc:Name']?.['#text'] || \"\"}\nDescription : ${project?.['cbc:Description']?.['#text'] || \"\"}\nMontant estimé : ${montant}\nDescription lot : ${lotDesc}\n\n=== TEXTE PDF ===\n${pdfText}`;\n\nreturn [{ json: { text: apiText } }];"
+        "jsCode": "const html = $input.first().json.data;\nconst BASE = 'https://www.marches-securises.fr/entreprise/';\n\nconst blocs = html.split('<table class=\"consultation en_cours entreprise\">');\nblocs.shift();\n\nconst totalMatch = html.match(/(\\d+)\\s+consultations?\\s+trouvées?/i);\nconst total = totalMatch ? totalMatch[1] : '?';\n\nconst mois = 'janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre';\nconst dateRegex = new RegExp(`(\\\\d{1,2}\\\\s+(?:${mois})\\\\s+\\\\d{4})`, 'gi');\n\nconst moisMap = {\n  'janvier':0,'février':1,'mars':2,'avril':3,'mai':4,'juin':5,\n  'juillet':6,'août':7,'septembre':8,'octobre':9,'novembre':10,'décembre':11\n};\n\nconst results = [];\n\nfor (const bloc of blocs) {\n  const cleMatch = bloc.match(/cle_dce=([a-z0-9]{15,})/);\n  if (!cleMatch) continue;\n  const cle = cleMatch[1];\n\n  // Acheteur\n  const acheteurMatch = bloc.match(/<td colspan=\"5\">\\s*([^<\\n]+?)\\s*<!--/);\n  const acheteur = acheteurMatch ? acheteurMatch[1].trim() : 'N/A';\n\n  // Objet\n  const objetMatch = bloc.match(/<div style=\"display:block[^\"]*\"[^>]*>([\\s\\S]{10,400}?)(?:<\\/div>|<a )/);\n  const objet = objetMatch ? objetMatch[1].replace(/<[^>]+>/g, '').trim().substring(0, 250) : 'N/A';\n\n  // Référence\n  const refMatch = bloc.match(/Référence<\\/td>\\s*<td[^>]*>\\s*(?:<span[^>]*>)?([^<\\t]{5,80})(?:<\\/span>)?<\\/td>/);\n  const reference = refMatch ? refMatch[1].trim() : '';\n\n  // Type de marché\n  const typeMatch = bloc.match(/Type de march[^<]*<\\/td>\\s*<td[^>]*>\\s*(?:<span[^>]*>)?([^<]{5,80})(?:<\\/span>)?<\\/td>/);\n  const typeMarche = typeMatch ? typeMatch[1].trim() : '';\n\n  // Procédure\n  const procMatch = bloc.match(/Proc[ée]dure[^<\\t]*<\\/td>\\s*<td[^>]*>\\s*(?:<span[^>]*>)?([^<]{3,100})(?:<\\/span>)?<\\/td>/);\n  const procedure = procMatch ? procMatch[1].trim() : '';\n\n  // Zone\n  const zoneMatch = bloc.match(/Zone[^<]*<\\/td>\\s*<td[^>]*>\\s*(?:<span[^>]*>)?([^<]{2,60})(?:<\\/span>)?<\\/td>/);\n  const zone = zoneMatch ? zoneMatch[1].trim() : '';\n\n  // Dates\n  const datesTexte = [...bloc.matchAll(dateRegex)].map(m => m[1]);\n  const datePublication = datesTexte[0] || '';\n  const dateCloture = datesTexte[1] || '';\n\n  // URL AAP (absolue)\n  const urlAAP = `${BASE}?module=script|dl_la_s&cle_dce=${cle}`;\n  const urlDetail = `${BASE}?module=consultation|details&cle_dce=${cle}`;\n\n  // Date pour tri\n  let dateObj = null;\n  const dp = datePublication.toLowerCase().match(/(\\d{1,2})\\s+(\\w+)\\s+(\\d{4})/);\n  if (dp && moisMap[dp[2]] !== undefined) {\n    dateObj = new Date(parseInt(dp[3]), moisMap[dp[2]], parseInt(dp[1]));\n  }\n\n  // Vérifier AAP présent\n  const hasAAP = bloc.includes('dl_la_s');\n\n  results.push({\n    cle_dce: cle,\n    acheteur,\n    objet,\n    reference,\n    typeMarche,\n    procedure,\n    zone,\n    datePublication,\n    dateCloture,\n    hasAAP,\n    urlDetail,\n    urlAAP: hasAAP ? urlAAP : '',\n    total,\n    keyword: $input.first().json.keyword || '',\n    scrapedAt: new Date().toISOString(),\n    _dateSort: dateObj ? dateObj.getTime() : 0\n  });\n}\n\n// Trier par date décroissante (plus récent en premier)\nresults.sort((a, b) => b._dateSort - a._dateSort);\n\n// Supprimer le champ de tri interne\nresults.forEach(r => delete r._dateSort);\n\n// Retourner les 20 premiers en items séparés\nreturn results.slice(0, 1).map(r => ({ json: r }));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        448,
-        -944
+        -656,
+        -1792
       ],
-      "id": "a080b9ce-2c48-4461-82ff-72064e24943b",
-      "name": "Fusion textes"
+      "id": "0c7f806a-2022-497c-9811-0a6509a77a11",
+      "name": "Traitement de donn"
     },
     {
       "parameters": {
-        "url": "={{ $json.pdf_url }}",
+        "url": "={{ $json.urlAAP }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        80,
-        -960
+        -464,
+        -1792
       ],
-      "id": "b7662fcc-3e04-490a-95d6-8edc462510b8",
-      "name": "Scrape BOAMP"
+      "id": "c060453c-6d2a-4c64-989a-2b6fd6983691",
+      "name": "pdf"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -288,
+        -1792
+      ],
+      "id": "fcb8dae8-3c06-47f1-b250-ac8b3e38171f",
+      "name": "Extract from pdf"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const llmResponse = item.json.text || \"\";\n  \n  // Chercher la ligne qui commence par VALIDE ou REJETÉ\n  const lines = llmResponse.split('\\n');\n  const resultLine = lines.find(l => \n    l.trim().toUpperCase().startsWith('VALIDE') || \n    l.trim().toUpperCase().startsWith('REJETÉ') ||\n    l.trim().toUpperCase().startsWith('REJETE')\n  ) || llmResponse;\n  \n  // Parser la ligne trouvée\n  const parts = resultLine.split('|');\n  const status = (parts[0] || '').trim().toUpperCase();\n  const reason = (parts[1] || 'Pas de raison fournie').trim();\n  const cle = (parts[2] || item.json.cle_dce || '').trim();\n  \n  const isValid = status.startsWith('VALIDE');\n  \n  return {\n    json: {\n      ...item.json,\n      isValid,\n      filterReason: reason,\n      cle_dce: cle || item.json.cle_dce,\n      rawLLM: llmResponse.substring(0, 100) // debug\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        -1712
+      ],
+      "id": "838f96b2-acdd-4c7d-b9f6-dcdbdec60880",
+      "name": "Code in JavaScript4"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "62c36827-4366-46e8-867a-bd3c3002d2bf",
+              "leftValue": "={{ $json.isValid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        480,
+        -1712
+      ],
+      "id": "70f1b250-9a94-450f-8f14-945f5f873089",
+      "name": "offre valide ?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const llmItems = $input.all();\nconst result = [];\n\nllmItems.forEach(item => {\n  const llmResponse = item.json.text || \"\";\n  \n  // Extraire la ligne VALIDE|...\n  const lines = llmResponse.split('\\n');\n  const resultLine = lines.find(l =>\n    l.trim().toUpperCase().startsWith('VALIDE') ||\n    l.trim().toUpperCase().startsWith('REJETÉ') ||\n    l.trim().toUpperCase().startsWith('REJETE')\n  ) || llmResponse;\n\n  const parts = resultLine.split('|');\n  const status = (parts[0] || '').trim().toUpperCase();\n\n  if (status.startsWith('VALIDE')) {\n    result.push({\n      json: {\n        ...item.json,\n        isValid: true,\n        filterReason: parts[1] ? parts[1].trim() : 'Pas de raison fournie',\n        cle_dce: (parts[2] || item.json.cle_dce || '').trim()\n      }\n    });\n  }\n});\n\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        -1760
+      ],
+      "id": "513171fd-7e9b-4177-b23e-0ff7225a829a",
+      "name": "Code in JavaScript5"
     }
   ],
   "pinData": {},
@@ -267,67 +1022,7 @@
       "main": [
         [
           {
-            "node": "Edit Fields",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP Request": {
-      "main": [
-        []
-      ]
-    },
-    "HTTP Request2": {
-      "main": [
-        [
-          {
-            "node": "Code in JavaScript2",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Edit Fields": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request2",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Code in JavaScript2": {
-      "main": [
-        [
-          {
-            "node": "Scrape BOAMP",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract from File": {
-      "main": [
-        [
-          {
-            "node": "Fusion textes",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Code in JavaScript3": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request",
+            "node": "If1",
             "type": "main",
             "index": 0
           }
@@ -338,19 +1033,8 @@
       "main": [
         [
           {
-            "node": "Code in JavaScript3",
+            "node": "structurée la rep llm",
             "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Google Gemini Chat Model": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Basic LLM Chain",
-            "type": "ai_languageModel",
             "index": 0
           }
         ]
@@ -358,14 +1042,20 @@
     },
     "télécharge le PDF": {
       "main": [
-        []
+        [
+          {
+            "node": "extraction du texte du PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Fusion textes": {
       "main": [
         [
           {
-            "node": "Basic LLM Chain",
+            "node": "analyse les offre vs au mot-clé",
             "type": "main",
             "index": 0
           }
@@ -376,7 +1066,410 @@
       "main": [
         [
           {
-            "node": "Extract from File",
+            "node": "télécharge le PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extraction et validation de la configuration": {
+      "main": [
+        [
+          {
+            "node": "appel API BOAMP",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Scrape marche securises",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "appel API BOAMP": {
+      "main": [
+        [
+          {
+            "node": "extraction les info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extraction les info": {
+      "main": [
+        [
+          {
+            "node": "Scrape BOAMP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extraction du texte du PDF": {
+      "main": [
+        [
+          {
+            "node": "Fusion textes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "structurée la rep llm": {
+      "main": [
+        [
+          {
+            "node": "envoi des leads à l'API Odoo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "envoi des leads à l'API Odoo": {
+      "main": [
+        []
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "extraction et validation de la configuration",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Filtre par source",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "offre valide",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "analyse les offre vs au mot-clé": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Scrape BOAMP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "offre valide": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "analyse les offre vs au mot-clé",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtre par source": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "marchespublics ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "FranceMarches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "marchespublics ?": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "boamp ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "boamp ?": {
+      "main": [
+        [
+          {
+            "node": "extraction et validation de la configuration",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "marches securise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrap aws": {
+      "main": [
+        []
+      ]
+    },
+    "marches securise": {
+      "main": [
+        [
+          {
+            "node": "Scrape marche securises",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Ollama Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape marche securises": {
+      "main": [
+        [
+          {
+            "node": "Traitement de donn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Traitement de donn": {
+      "main": [
+        [
+          {
+            "node": "pdf",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "pdf": {
+      "main": [
+        [
+          {
+            "node": "Extract from pdf",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from pdf": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript4": {
+      "main": [
+        [
+          {
+            "node": "offre valide ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "offre valide ?": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript5",
             "type": "main",
             "index": 0
           }
@@ -384,12 +1477,15 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
-    "availableInMCP": false
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "Africa/Tunis",
+    "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "54ac3454-a864-4545-8482-30eb99cd2534",
+  "versionId": "3601be84-ceb9-4f51-a6f3-116a65094b71",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
