@@ -1,0 +1,1042 @@
+{
+  "name": "Marchés Sécurisés",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -7136,
+        -1680
+      ],
+      "id": "b53e2deb-9cf1-4933-a393-33183973c8bb",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map((item, index) => {\n  const llmResponse = item.json.text || \"\";\n  \n  // ✅ Récupérer le texte PDF original depuis le nœud \"Extract from pdf\"\n  const pdfText = $('Extract from pdf1').all()[index]?.json?.text \n               || $('Extract from pdf1').first().json.text \n               || \"Texte PDF non disponible\";\n  \n  // Chercher la ligne VALIDE/REJETÉ dans la réponse LLM\n  const lines = llmResponse.split('\\n').map(l => l.trim()).filter(l => l);\n  const resultLine = lines.find(l => \n    l.toUpperCase().startsWith('VALIDE') || \n    l.toUpperCase().startsWith('REJETÉ') ||\n    l.toUpperCase().startsWith('REJETE')\n  ) || llmResponse;\n  \n  // Parser la réponse LLM\n  const parts = resultLine.split('|');\n  const status = (parts[0] || '').trim().toUpperCase();\n  const reason = (parts[1] || 'Pas de raison fournie').trim();\n  const cle = (parts[2] || item.json.cle_dce || '').trim();\n  \n  const isValid = status.startsWith('VALIDE');\n  \n  return {\n    json: {\n      // Données de validation du LLM\n      isValid, \n      filterReason: reason,\n      cle_dce: cle || item.json.cle_dce,\n      \n      // ✅ TEXTE PDF COMPLET - Conservé ici\n      pdfText: pdfText,\n      numpages: $('Extract from pdf1').all()[index]?.json?.numpages || null,\n      \n      // Debug si besoin\n      rawLLM: llmResponse.substring(0, 200),\n      validationStatus: status\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4480,
+        -784
+      ],
+      "id": "009308eb-bac7-4732-9a19-2500ef14b57b",
+      "name": "Code in JavaScript5"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -5360,
+        -496
+      ],
+      "id": "b39d3137-e54a-449e-bfe5-63fc8185c1ce",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "M7uDBoEU3jzmGnS8",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -5840,
+        -672
+      ],
+      "id": "036cc3bb-d9ef-4f19-96d7-8c9ff51d6ace",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "M7uDBoEU3jzmGnS8",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -3536,
+        -1376
+      ],
+      "id": "7fe1bbd3-a4e7-4641-bb59-f75df1458d03",
+      "name": "Google Gemini Chat Model4",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "M7uDBoEU3jzmGnS8",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -4464,
+        -512
+      ],
+      "id": "18203e97-1017-42a3-aad4-d84860869477",
+      "name": "Google Gemini Chat Model5",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "M7uDBoEU3jzmGnS8",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8069/api/crm/lead/bulk_create",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "=Content-Type",
+              "value": "=application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer 24f572e1a8352e7ac7ac6f7554141e7d41d918ba"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json) }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2080,
+        -816
+      ],
+      "id": "649b89c3-55f9-444e-a3e3-c27dc23c3a3d",
+      "name": "envoi des leads à l'API Odoo1"
+    },
+    {
+      "parameters": {
+        "url": "https://www.marches-securises.fr/entreprise/",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "module",
+              "value": "liste_consultations"
+            },
+            {
+              "name": "r",
+              "value": "={{ $json.keyword }}"
+            },
+            {
+              "name": "presta",
+              "value": ";services;travaux;fournitures;autres"
+            },
+            {
+              "name": "date_cloture_type",
+              "value": "0"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -6288,
+        -896
+      ],
+      "id": "e9b02492-4ac0-41ac-b526-f022d0dcc49d",
+      "name": "Scrape marche securises1"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.urlAAP }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -5648,
+        -928
+      ],
+      "id": "164eb258-3b9c-4078-8386-7f90ab29da9a",
+      "name": "pdf1"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -5456,
+        -896
+      ],
+      "id": "2182e653-5211-4584-a788-e6a970c2059f",
+      "name": "Extract from pdf1"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const llmResponse = item.json.text || \"\";\n  \n  // Chercher la ligne qui commence par VALIDE ou REJETÉ\n  const lines = llmResponse.split('\\n');\n  const resultLine = lines.find(l => \n    l.trim().toUpperCase().startsWith('VALIDE') || \n    l.trim().toUpperCase().startsWith('REJETÉ') ||\n    l.trim().toUpperCase().startsWith('REJETE')\n  ) || llmResponse;\n  \n  // Parser la ligne trouvée\n  const parts = resultLine.split('|');\n  const status = (parts[0] || '').trim().toUpperCase();\n  const reason = (parts[1] || 'Pas de raison fournie').trim();\n  const cle = (parts[2] || item.json.cle_dce || '').trim();\n  \n  const isValid = status.startsWith('VALIDE');\n  \n  return {\n    json: {\n      ...item.json,\n      isValid, \n      filterReason: reason,\n      cle_dce: cle || item.json.cle_dce,\n      rawLLM: llmResponse.substring(0, 100) // debug\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4896,
+        -864
+      ],
+      "id": "984a0faa-a1f7-4359-b059-c1c5af215f25",
+      "name": "Code in JavaScript12"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "62c36827-4366-46e8-867a-bd3c3002d2bf",
+              "leftValue": "={{ $json.isValid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "4a0ee811-7314-4605-9c21-b9689fdaedc6",
+              "leftValue": "",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -4672,
+        -704
+      ],
+      "id": "8472c162-10b5-41ab-8401-c4884735cd37",
+      "name": "offre valide ?1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Tu es un extracteur expert des avis de marchés publics français (Marchés Sécurisés).\n\n⚠️ TRÈS IMPORTANT: Tu recevras POSSIBLEMENT PLUSIEURS TEXTES PDF.\n\n{{ $('Extract from pdf1').item.json.text }}\n\n- S'il y a PLUSIEURS PDFs → retourne un ARRAY JSON avec UN objet par PDF\n- S'il y a UN SEUL PDF → retourne un ARRAY JSON avec UN objet\n\n========================\nINSTRUCTION PRINCIPALE\n========================\n\nPour CHAQUE texte PDF reçu, crée UN objet JSON et ajoute-le à l'array.\n\nRespecte STRICTEMENT ces règles:\n- Réponds UNIQUEMENT en JSON valide\n- Aucune phrase hors JSON\n- Aucun commentaire  \n- Aucun champ supplémentaire\n- Si une donnée est absente → mettre \"\"\n- expected_revenue doit être un nombre entier (sans espace, sans €, sans texte). Cherche \"Maximum\" ou \"Montant\" ou \"Valeur estimée\". Si absent → 1000\n- date_deadline format obligatoire YYYY-MM-DD\n- phone doit contenir uniquement 10 chiffres sans espace. Convertir +33 en 0\n- zip doit contenir exactement 5 chiffres\n- street ne doit PAS contenir le code postal ni la ville\n- website : prendre l'URL du profil acheteur\n- email_from : prendre \"Mail\" ou \"Email\" ou \"Courriel\"\n- contact_name : nom court de l’organisme acheteur\n- company_name : nom complet officiel\n\n========================\nCLASSIFICATION BUSINESS UNIT\n========================\n\n652 → Solutions (data, GED, OCR, automatisation, RPA, API, dashboard, BPO)\n657 → Digital (web, CRM, plateforme, portail, SaaS, SI métier)\n660 → Ingénierie (logiciel technique, industrie, outils spécialisés)\n661 → Conseils (audit, archivistique, accompagnement, stratégie)\n\n========================\nMAPPING OFFRE / SOUS-OFFRE (OBLIGATOIRE)\n========================\n\n--- Solutions (business_unit_id: \"652\") ---\n\nSi \"dématérialisation\" → offre_id: \"53\", sous_offre_id: \"271\"\nSi \"structuration documentaire\" → \"53\", \"272\"\nSi \"BPO\" → \"53\", \"273\"\nSi \"OCR\" ou \"LAD\" ou \"RAD\" → \"53\", \"274\"\nSi \"record management\" ou \"gestion documentaire\" → \"53\", \"275\"\n\nSi \"reporting\" ou \"dashboard\" → \"54\", \"276\"\nSi \"data quality\" → \"54\", \"277\"\nSi \"data modeling\" → \"54\", \"278\"\nSi \"ETL\" ou \"API\" ou \"intégration\" → \"54\", \"279\"\nSi \"performance data\" → \"54\", \"280\"\n\nSi \"DPA\" → \"55\", \"281\"\nSi \"GED\" → \"55\", \"282\"\nSi \"RPA\" ou \"automatisation\" → \"55\", \"283\"\nSi \"portail collaboratif\" → \"55\", \"284\"\nSi \"chatbot\" → \"55\", \"285\"\n\n--- Digital (business_unit_id: \"657\") ---\n\nSi \"GED\" ou \"docuware\" ou \"dwe\" → \"56\", \"289\"\n\nSi \"flux\" ou \"workflow\" → \"57\", \"296\"\nSi \"telios\" → \"57\", \"292\"\nSi \"magitel\" → \"57\", \"293\"\nSi \"demabox\" → \"57\", \"294\"\nSi \"parapheur\" → \"57\", \"295\"\n\nSi \"portail\" → \"58\", \"297\"\n\nSi \"CRM\" → \"59\", \"299\"\nSi \"chat\" → \"59\", \"300\"\n\nSi \"conseil\" → \"60\", \"301\"\nSi \"assistance\" → \"60\", \"302\"\nSi \"AMOA\" → \"60\", \"303\"\n\nSi \"SI métier\" → \"61\", \"304\"\n\n--- Ingénierie (business_unit_id: \"660\") ---\n\nSi \"logiciel technique\" → \"64\", \"310\"\nSi \"Dream\" → \"64\", \"311\"\n\n--- Conseils (business_unit_id: \"661\") ---\n\nSi \"archivistique\" → \"65\", \"312\"\n\n========================\nRÈGLES DE DÉCISION\n========================\n\n1. Analyse uniquement TITRE + DESCRIPTION\n2. Cherche mots-clés dominants\n3. Détermine business_unit_id\n4. Puis offre_id\n5. Puis sous_offre_id\n6. Si aucun match → utiliser:\n   - business_unit_id: \"652\"\n   - offre_id: \"55\"\n   - sous_offre_id: \"282\"\n\n========================\nDURÉE DU PROJET\n========================\n\n- Cherche dans le texte : \"durée\", \"période\", \"mois\", \"ans\", \"reconduction\", \n  \"reconductible\", \"tacite reconduction\", \"période initiale\"\n- Normalise TOUJOURS au format lisible :\n  Ex: \"12 mois\", \"3 ans\", \"24 mois renouvelable 2 fois\", \"36 mois + 2 reconductions\"\n- Si durée initiale + reconductions → les mentionner toutes :\n  Ex: \"12 mois + 3 reconductions d'1 an\"\n- Si absent → mettre \"\"\n- Ne jamais inventer une durée\n- duree_projet est une STRING (pas un nombre)\n\n\n========================\nMODE DE LIVRAISON\n========================\n\nDétermine le champ Mode_de_livraison selon le contenu du marché :\n\nSi \"forfait\", \"prix global\", \"marché forfaitaire\" → \"01 Forfait\"\nSi \"assistance technique\", \"support\", \"régie\" → \"02 Assistance technique\"\nSi \"centre de service\", \"TMA\", \"infogérance\" → \"03 Centre de service\"\nSi \"abonnement\", \"SaaS\", \"mensuel\", \"annuel\" → \"04 Abonnement\"\nSi \"licence\", \"achat logiciel\", \"droit d’usage\" → \"05 Licence\"\nSi \"unité d'œuvre\", \"prix unitaire\", \"bon de commande\" → \"06 Unité d'oeuvre\"\nSinon → \"07 Autre\"\n\n⚠️ Toujours retourner UNE seule valeur exacte parmi celles-ci.\n⚠️ OBLIGATOIRE:\n- offre_id et sous_offre_id doivent être des IDs existants\n- ne jamais inventer d’ID\n- ces champs ne doivent jamais être vides\n\n========================\nSTRUCTURE JSON\n========================\n\n{\n  \"name\": \"\",\n  \"contact_name\": \"\",\n  \"company_name\": \"\",\n  \"email_from\": \"\",\n  \"email_cc\": \"\",\n  \"phone\": \"\",\n  \"function\": \"\",\n  \"street\": \"\",\n  \"city\": \"\",\n  \"zip\": \"\",\n  \"website\": \"\",\n  \"date_deadline\": \"\",\n  \"expected_revenue\": 1000,\n  \"titulaire\": \"\",\n  \"adresse_titulaire\": \"\",\n  \"business_unit_id\": \"\",\n  \"offre_id\": \"\",\n  \"sous_offre_id\": \"\",\n\"Mode_de_livraison\": \"\"\n\n}\n\n========================\nFORMAT FINAL\n========================\n\nRetourne STRICTEMENT:\n\n[{\"name\":\"\",\"contact_name\":\"\",\"company_name\":\"\",\"email_from\":\"\",\"email_cc\":\"\",\n\"phone\":\"\",\"function\":\"\",\"street\":\"\",\"city\":\"\",\"zip\":\"\",\"website\":\"\",\n\"date_deadline\":\"\",\"expected_revenue\":\"\",\"duree_projet\":\"\",\"titulaire\":\"\",\n\"adresse_titulaire\":\"\",\"business_unit_id\":\"\",\"offre_id\":\"\",\"sous_offre_id\":\"\",\n\"Mode_de_livraison\":\"\"}]\n\n⚠️ IMPORTANT:\n- Toujours un ARRAY\n- Même pour un seul PDF\n- Aucun texte autour\n- JSON valide uniquement",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -4224,
+        -704
+      ],
+      "id": "26207d9e-f984-4d04-86af-f5d1231062c0",
+      "name": "analyse les offre vs au mot-clé3"
+    },
+    {
+      "parameters": {
+        "content": "## Scraping marche securisee ",
+        "height": 496,
+        "width": 2800,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -6304,
+        -944
+      ],
+      "typeVersion": 1,
+      "id": "e8fc205a-27c0-4e98-8a2e-8234f6d2bbb9",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "content": "## Odoo",
+        "height": 224,
+        "width": 1536,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -3344,
+        -880
+      ],
+      "typeVersion": 1,
+      "id": "fd860872-68be-47b5-acbe-1e0b971775d7",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -4368,
+        -512
+      ],
+      "id": "4eca3b34-2cc5-44ef-b208-419c29cdc42f",
+      "name": "OpenAI Chat Model4",
+      "credentials": {
+        "openAiApi": {
+          "id": "0p670OhPPPCuGRAG",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "176t6SSzQpQfMEpGTMe9Jux6SPSdKhDoP8seUnC6v63Y"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "piste_opportunite(Sheet1)",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -5552,
+        -1712
+      ],
+      "id": "f6fdccf0-1ec7-46d2-acd7-0b2e6044873f",
+      "name": "Get row(s) in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "PXH3Md3EmSowxJCE",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Tu es un expert en développement commercial pour STUDIA, entreprise spécialisée en \ntransformation digitale, gestion documentaire et valorisation des données complexes.\nCréée en 2009, 300+ collaborateurs, CA 30M€, clients : grands comptes et ETI.\n\n═══════════════════════════════════════════════════════\nRÉFÉRENTIEL COMPLET DES OFFRES STUDIA\n═══════════════════════════════════════════════════════\n\n01 Gestion Intelligente des Données\n   → Dématérialisation, Conception & Structuration Documentaire, BPO,\n     Captation LAD/RAD/OCR, Record Management, Gestion archives,\n     Transformation documents (CSV, Factur-X, UBL/CII), Mise en qualité des données\n\n02 Data\n   → Data Reporting/Dashboarding, Data Quality, Data Modeling,\n     Data Integration ETL/ESB/API, Data Performance,\n     Conversion vers support physique (PDF → bobine film)\n\n03 Digitalisation et Automatisation\n   → DPA, GED, RPA (UiPath, Blue Prism, Selenium), Portails Collaboratifs,\n     Chatbot, Logiciel IETP, Outil de rédaction structurée,\n     Agents IA, Automatisation processus métiers, Doc control,\n     Automatisation saisie et diffusion documentaire\n\n04 GED (Logiciels)\n   → Mycelia/NEOGED, DWE, Docuware\n\n05 Gestion des flux\n   → TELIOS, MAGITEL, DEMABOX, METAPARAPHEUR,\n     Gestion des flux spécifique, Télétransmission flux préfecture,\n     Facturation électronique (Factur-X, UBL, normes 2026),\n     Digitalisation courriers (OCR, RAD/LAD)\n\n06 Portails / Workflows collaboratifs\n   → Mycelia/Collab, Solution spécifique, Circuits de signature électronique\n\n07 CRM / Support\n   → CRM Oracle, Chat\n\n08 Services\n   → Conseil, Assistance technique, AMOA, Accompagnement transformation digitale\n\n09 SI Métier\n   → Aquedi, DHESA, PAMA, Support PLM, Intégration SAP\n\n10 Micrographie\n    → Microfilmage, Conservation sécurisée\n\n11 Logiciel\n    → S1000D XML Tools, DREAM, Structuration AS9100D, 2000M\n\n12 IA\n    → Maintenance prédictive, Agents IA, Automatisation intelligente\n\n13 Conseil archivistique\n    → Récolement, Cartographie, Elimination, Consulting,\n      Inventaire et versement archives, Gestion cycle de vie archives\n\nSECTEURS D'ACTIVITÉ STUDIA :\nPublic (collectivités, mairies, administrations), Energie (CNPE, SIAAP),\nIndustrie (Airbus, Safran, KNDS, Collins), Aéro & Défense, Innovation\n\nHORS SCOPE STUDIA (savoir_faire_note = 0 à 2 maximum) :\nNettoyage, déchets, BTP pur, fourniture matériel physique sans services,\nrestauration, sécurité physique, travaux, électricité, plomberie, assurance,\ngardiennage, espaces verts, transport de personnes\n\n═══════════════════════════════════════════════════════\nDONNÉES FOURNIES\n═══════════════════════════════════════════════════════\n\n{{ $json.text }}\n\n═══════════════════════════════════════════════════════\nINSTRUCTIONS SPÉCIFIQUES SUR LE CONTENU PDF\n═══════════════════════════════════════════════════════\n\nLe contenu du marché fourni dans === MARCHÉ À ÉVALUER === ci-dessus contient\nles détails complets extraits du PDF. Tu DOIS l'analyser en priorité pour :\n\n→ Identifier les lots et sous-lots spécifiques (LOT-0001, LOT-0002...)\n→ Extraire les CPV exacts (48900000, 72212900, etc.)\n→ Comprendre la nature réelle du marché (fournitures, services, travaux)\n→ Identifier le lieu d'exécution précis\n→ Extraire la description détaillée (pas juste le titre)\n→ Repérer les clauses spécifiques (reconduction, multi-attributaires, etc.)\n\n═══════════════════════════════════════════════════════\nPROCESSUS D'ÉVALUATION (suivre dans cet ordre strict)\n═══════════════════════════════════════════════════════\n\nÉTAPE 0 — Lire la section === CRITÈRES IA === en priorité absolue\n→ Lire attentivement la section === CRITÈRES IA === fournie dans les données ci-dessus\n→ Si des critères sont présents (avec un nom, une description ou une condition\n  \"Pertinence forte si\" non vide) :\n  - Ces critères PRIMENT sur toute autre règle de scoring\n  - La condition \"Pertinence forte si\" de chaque critère devient\n    le critère principal pour noter le champ correspondant\n  - Mapping obligatoire :\n      Critère 1 → savoir_faire_note\n      Critère 2 → potentiel_client_note\n      Critère 3 → chiffre_affaires_note\n      Critère 4 → duree_recurence_note\n      Critère 5 → delai_reponse_note\n  - Si la condition \"Pertinence forte si\" est satisfaite → note ≥ 7\n  - Si la condition \"Pertinence forte si\" n'est pas satisfaite → note ≤ 6\n  - Mentionner dans chaque resultat : \"Critère IA appliqué : [condition]\"\n→ Si la section indique \"Aucun critère IA configuré\" → utiliser les règles standard\n\nÉTAPE 1 — Analyser le contenu du marché pour identifier le domaine (savoir_faire)\n→ Lire attentivement le contenu du marché fourni dans === MARCHÉ À ÉVALUER ===\n→ Le marché correspond-il à une offre ou sous-offre STUDIA ? Chercher dans :\n  - Le titre et la description complète\n  - Les lots détaillés\n  - Les CPV listés\n  - Les mots-clés techniques (GED, IA, data, dématérialisation, etc.)\n→ Chercher aussi par secteur client : collectivité, industrie, énergie, défense\n→ Si OUI → continuer normalement\n→ Si NON → savoir_faire_note = 0-2, appliquer les plafonds hors-métier\n\nExemples de scoring savoir_faire :\n- Marché mentionne \"gestion documentaire\", \"GED\", \"archives\" → offre 01 ou 04 → note 8-10\n- Marché mentionne \"intelligence artificielle\", \"RPA\", \"automatisation\" → offre 03 → note 8-9\n- Marché mentionne \"flux\", \"facturation électronique\", \"télétransmission\" → offre 05 → note 8-9\n- Marché mentionne \"data\", \"reporting\", \"ETL\" → offre 02 → note 7-9\n- Marché est purement BTP, nettoyage, matériel physique → hors scope → note 0-1\n\n→ Toujours citer dans le resultat :\n  \"Domaine : [extraits pertinents], offre STUDIA : [numéro]\"\n\nÉTAPE 2 — Analyser le potentiel client\n→ Rechercher le nom du client dans la section === HISTORIQUE === fournie\n→ Appliquer ce raisonnement :\n\n  CAS A — Client connu dans l'historique avec projets GAGNÉS :\n  → Relation établie → potentiel élevé\n  → Si CA historique élevé avec ce client → bonus supplémentaire\n  → note 7-10 selon volume et récurrence\n\n  CAS B — Client connu dans l'historique avec projets PERDUS :\n  → Relation existante mais difficile → note 4-6\n\n  CAS C — Client inconnu mais secteur connu de STUDIA :\n  → Secteur public, industrie, énergie, défense → note 5-7\n  → Nouveau secteur → note 3-5\n\n  CAS D — Client inconnu, secteur hors scope STUDIA :\n  → note 1-3, plafonné à 4 si savoir_faire ≤ 2\n\n→ Toujours préciser : \"Client connu : OUI/NON, projets historiques : X, CA total : Xk€\"\n\nÉTAPE 3 — Analyser le chiffre d'affaires\n→ Rechercher le montant exact dans le contenu du marché (section Valeur)\n→ Comparer avec la moyenne historique de 154k€\n→ Rechercher dans l'historique si des projets similaires existent\n\n→ Grille de scoring :\n  Montant > 300k€            → note 9-10\n  Montant 200-300k€          → note 7-8\n  Montant 100-200k€          → note 5-7\n  Montant 50-100k€           → note 3-5\n  Montant < 50k€             → note 1-3\n  Montant non renseigné      → note 5 par défaut\n\n→ Bonus +1 si projets similaires dans l'historique ont généré un bon CA\n→ Malus -1 si projets similaires ont été peu rentables\n→ Plafonné à ≤ 6 si savoir_faire ≤ 2\n\n→ Toujours préciser : \"Montant : Xk€ vs moyenne 154k€, projets similaires : OUI/NON\"\n\nÉTAPE 4 — Analyser la durée et récurrence\n→ Rechercher la durée exacte dans le contenu du marché\n→ Rechercher dans l'historique des contrats similaires\n\n→ Grille de scoring :\n  Contrat > 3 ans ou reconductible  → note 8-10\n  Contrat 1-3 ans                   → note 6-8\n  Contrat < 1 an                    → note 4-6\n  Prestation ponctuelle             → note 2-4\n  Durée non renseignée              → note 5 par défaut\n\n→ Bonus +1 si l'historique montre que ce type de contrat est souvent renouvelé\n→ Bonus +1 si client connu avec historique de renouvellement chez STUDIA\n→ Plafonné à ≤ 4 si savoir_faire ≤ 2\n\n→ Toujours préciser : \"Durée : X mois/ans, reconductible : OUI/NON, récurrence historique : OUI/NON\"\n\nÉTAPE 5 — Calculer le délai EXACTEMENT\n→ Lire la date limite dans le contenu du marché\n→ Calculer : date_limite - AUJOURD'HUI = X jours\n→ ATTENTION : vérifier l'année, ne pas confondre mois et années\n\n  < 14 jours   → note 1-2  (trop urgent)\n  14-30 jours  → note 5-6  (court mais faisable)\n  1-2 mois     → note 7-8  (confortable)\n  > 2 mois     → note 9-10 (très bon délai)\n\n→ Toujours préciser : \"Deadline : [date], aujourd'hui : [date], délai : X jours\"\n\nÉTAPE 6 — Vérification cohérence obligatoire\n→ Les critères IA de la section === CRITÈRES IA === ont-ils bien été appliqués ?\n→ Chaque resultat mentionne-t-il \"Critère IA appliqué : [condition]\" si critères présents ?\n→ Si hors métier : potentiel_client ≤ 4 et duree_recurence ≤ 4 ?\n→ Le délai est-il calculé en jours depuis aujourd'hui ?\n→ Les données historiques ont-elles été consultées pour chaque critère ?\n\n═══════════════════════════════════════════════════════\nRÈGLES ABSOLUES DE SCORING\n═══════════════════════════════════════════════════════\n\nRègle 1 — Critères IA = priorité absolue\nSi la section === CRITÈRES IA === contient des critères non vides :\n  → Leurs conditions \"Pertinence forte si\" priment sur toutes les règles standard\n  → Condition satisfaite = note ≥ 7 / Condition non satisfaite = note ≤ 6\n\nRègle 2 — Hors cœur de métier = plafonnement automatique\nSi savoir_faire_note ≤ 2 :\n  potentiel_client_note  ≤ 4\n  duree_recurence_note   ≤ 4\n  chiffre_affaires_note  ≤ 6\n\nRègle 3 — Contenu marché = source primaire de vérité technique\nLe contenu du marché prime sur toute autre source pour le domaine et les lots.\n\nRègle 4 — Historique = source de vérité commerciale\nToujours croiser avec l'historique avant de scorer potentiel_client,\nchiffre_affaires et duree_recurence.\n\n═══════════════════════════════════════════════════════\nFORMAT DE SORTIE\n═══════════════════════════════════════════════════════\n\nRetourne UNIQUEMENT un JSON valide, sans markdown, sans texte avant ni après.\n\nPour 1 marché :\n{\n  \"savoir_faire_resultat\": \"max 40 mots : adéquation métier, extrait du marché, offre STUDIA, critère IA appliqué si présent\",\n  \"savoir_faire_note\": 0,\n  \"potentiel_client_resultat\": \"max 40 mots : client connu OUI/NON, CA historique, potentiel relation, critère IA appliqué si présent\",\n  \"potentiel_client_note\": 0,\n  \"chiffre_affaires_resultat\": \"max 40 mots : montant vs 154k€, comparaison historique, critère IA appliqué si présent\",\n  \"chiffre_affaires_note\": 0,\n  \"duree_recurence_resultat\": \"max 40 mots : durée, reconductible OUI/NON, récurrence historique, critère IA appliqué si présent\",\n  \"duree_recurence_note\": 0,\n  \"delai_reponse_resultat\": \"max 40 mots : deadline [date], aujourd'hui [date], X jours restants, critère IA appliqué si présent\",\n  \"delai_reponse_note\": 0\n}\n\nPour N marchés → tableau de N objets JSON.",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -3120,
+        -1744
+      ],
+      "id": "00142304-f2c6-4938-9797-2527a6ce8a4d",
+      "name": "Basic LLM Chain5",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// ==================== RÉCUPÉRER urlAAP DEPUIS \"Code in JavaScript17\" ====================\nlet traitementItems = [];\ntry {\n  const js2Item = $('Code in JavaScript17').first();\n  traitementItems = [js2Item];\n  console.log(`✓ Item trouvé dans \"Code in JavaScript17\"`);\n  console.log(`urlAAP=${js2Item.json?.urlAAP}, cle_dce=${js2Item.json?.cle_dce}`);\n} catch(e) {\n  console.log('❌ Node \"Code in JavaScript17\" introuvable:', e.message);\n}\n\n// ==================== SÉPARER LES TYPES D'ITEMS ====================\nconst pertinenceItems = [];\nconst pdfItems = [];\nconst offreItems = [];\n\nfor (const item of items) {\n  const j = item.json || {};\n  \n  // Détection pertinence : contient les champs de scoring\n  if (typeof j.text === 'string' && (\n    j.text.includes('savoir_faire_resultat') ||\n    j.text.includes('savoir_faire_note')\n  )) {\n    pertinenceItems.push(item);\n    continue;\n  }\n  \n  // Détection PDF : a numpages\n  if (j.numpages !== undefined) {\n    pdfItems.push(item);\n    continue;\n  }\n  \n  // Détection offre : JSON avec name, date_deadline, etc.\n  if (typeof j.text === 'string' && (\n    j.text.trim().startsWith('[') ||\n    j.text.trim().startsWith('{') ||\n    j.text.includes('date_deadline') ||\n    j.text.includes('\"name\"')\n  )) {\n    offreItems.push(item);\n    continue;\n  }\n  \n  // Item déjà parsé\n  if (j.name && (j.date_deadline || j.company_name)) {\n    offreItems.push(item);\n  }\n}\n\n// Items avec cle_dce → traitement source\nconst sourceItems = items.filter(i => i.json?.cle_dce !== undefined);\n\nconsole.log(`Pertinence: ${pertinenceItems.length}, PDF: ${pdfItems.length}, Offres: ${offreItems.length}, Source: ${sourceItems.length}`);\n\n// ==================== PARSERS ====================\n\nfunction parsePertinence(item) {\n  try {\n    const raw = item?.json?.text || \"\";\n    \n    let cleaned = raw\n      .replace(/```json\\s*/gi, '')\n      .replace(/```\\s*/gi, '')\n      .replace(/\\\\n/g, '\\n')\n      .replace(/\\\\\"/g, '\"')\n      .trim();\n    \n    if (cleaned.startsWith('\"') && cleaned.endsWith('\"')) {\n      cleaned = cleaned.slice(1, -1);\n    }\n    \n    console.log('Pertinence nettoyée:', cleaned.substring(0, 100) + '...');\n    \n    const parsed = JSON.parse(cleaned);\n    const data = Array.isArray(parsed) ? parsed[0] : parsed;\n    \n    return {\n      savoir_faire_resultat: data.savoir_faire_resultat || \"\",\n      savoir_faire_note: Number(data.savoir_faire_note) || 0,\n      potentiel_client_resultat: data.potentiel_client_resultat || \"\",\n      potentiel_client_note: Number(data.potentiel_client_note) || 0,\n      chiffre_affaires_resultat: data.chiffre_affaires_resultat || \"\",\n      chiffre_affaires_note: Number(data.chiffre_affaires_note) || 0,\n      duree_recurence_resultat: data.duree_recurence_resultat || \"\",\n      duree_recurence_note: Number(data.duree_recurence_note) || 0,\n      delai_reponse_resultat: data.delai_reponse_resultat || \"\",\n      delai_reponse_note: Number(data.delai_reponse_note) || 0,\n    };\n    \n  } catch(e) {\n    console.log('❌ Erreur parsing pertinence:', e.message);\n    console.log('Raw text:', item?.json?.text?.substring(0, 200));\n    return {\n      savoir_faire_resultat: \"\",\n      savoir_faire_note: 0,\n      potentiel_client_resultat: \"\",\n      potentiel_client_note: 0,\n      chiffre_affaires_resultat: \"\",\n      chiffre_affaires_note: 0,\n      duree_recurence_resultat: \"\",\n      duree_recurence_note: 0,\n      delai_reponse_resultat: \"\",\n      delai_reponse_note: 0,\n    };\n  }\n}\n\nfunction parseOffre(item) {\n  try {\n    const raw = item?.json?.text || \"\";\n    const j = item?.json || {};\n    \n    if (j.name && (j.date_deadline || j.company_name)) {\n      return j;\n    }\n    \n    let cleaned = raw\n      .replace(/\\\\n/g, '\\n')\n      .replace(/\\\\\"/g, '\"')\n      .trim();\n    \n    if (cleaned.startsWith('\"') && cleaned.endsWith('\"')) {\n      cleaned = cleaned.slice(1, -1);\n    }\n    \n    const jsonStart = cleaned.indexOf('[');\n    const jsonEnd = cleaned.lastIndexOf(']') + 1;\n    \n    if (jsonStart !== -1 && jsonEnd > jsonStart) {\n      const jsonStr = cleaned.substring(jsonStart, jsonEnd);\n      const parsed = JSON.parse(jsonStr);\n      return Array.isArray(parsed) ? parsed[0] : parsed;\n    }\n    \n    return JSON.parse(cleaned);\n    \n  } catch(e) {\n    console.log('❌ Erreur parsing offre:', e.message);\n    return item?.json || {};\n  }\n}\n\n// ==================== PISTE SOURCE ====================\nconst pisteSourceId = (() => {\n  // Priorité 1 : Sub-Workflow trigger (nouveau N8N)\n  try { \n    const j = $('When Executed by Another Workflow').first().json || {};\n    const id = j.body?.id || j.id;\n    if (id) { console.log(`✓ pisteSourceId depuis \"When Executed by Another Workflow\": ${id}`); return id; }\n  } catch(e) {}\n  \n  // Priorité 2 : Sub-Workflow trigger (ancien nom)\n  try { \n    const j = $('Execute Workflow Trigger').first().json || {};\n    const id = j.body?.id || j.id;\n    if (id) { console.log(`✓ pisteSourceId depuis Execute Workflow Trigger: ${id}`); return id; }\n  } catch(e) {}\n  \n  // Priorité 3 : Webhook direct (mode standalone)\n  try { \n    const id = $('Webhook1').first().json.body?.id;\n    if (id) { console.log(`✓ pisteSourceId depuis Webhook1: ${id}`); return id; }\n  } catch(e) {}\n  \n  // Priorité 4 : shouldRun (cron direct)\n  try { \n    const id = $('shouldRun').first().json?.id;\n    if (id) { console.log(`✓ pisteSourceId depuis shouldRun: ${id}`); return id; }\n  } catch(e) {}\n\n  console.log('❌ pisteSourceId introuvable dans tous les triggers');\n  return null;\n})();\nconsole.log(`pisteSourceId final: ${pisteSourceId}`);\n\n// ==================== FONCTION GÉNÉRATION PDF ====================\nfunction sanitizePdf(str) {\n  return str\n    .substring(0, 100)\n    .replace(/\\\\/g, '\\\\\\\\')\n    .replace(/\\(/g, '\\\\(')\n    .replace(/\\)/g, '\\\\)')\n    .replace(/é|è|ê|ë/g, 'e').replace(/É|È|Ê/g, 'E')\n    .replace(/à|â|ä/g, 'a').replace(/À|Â/g, 'A')\n    .replace(/î|ï/g, 'i').replace(/Î/g, 'I')\n    .replace(/ô|ö/g, 'o').replace(/Ô/g, 'O')\n    .replace(/ù|û|ü/g, 'u').replace(/Ù|Û/g, 'U')\n    .replace(/ç/g, 'c').replace(/Ç/g, 'C')\n    .replace(/œ/g, 'oe').replace(/Œ/g, 'OE')\n    .replace(/«|»/g, '\"').replace(/–|—/g, '-')\n    .replace(/[']/g, \"'\")\n    .replace(/[^\\x20-\\x7E]/g, '?');\n}\n\nfunction generatePdfFromText(texte) {\n  const lignes = texte\n    .split('\\n')\n    .map(l => l.trim())\n    .filter(l => l.length > 0)\n    .slice(0, 300);\n\n  const LINES_PER_PAGE = 55;\n  const pageContents = [];\n  for (let p = 0; p < lignes.length; p += LINES_PER_PAGE) {\n    const pageLignes = lignes.slice(p, p + LINES_PER_PAGE);\n    const content = pageLignes.map((ligne, idx) => {\n      const y = 800 - (idx * 14);\n      return `BT /F1 9 Tf 30 ${y} Td (${sanitizePdf(ligne)}) Tj ET`;\n    }).join('\\n');\n    pageContents.push(content);\n  }\n\n  const parts = [];\n  let pos = 0;\n  const header = '%PDF-1.4\\n';\n  pos = Buffer.byteLength(header, 'latin1');\n\n  const addPart = (str) => {\n    pos += Buffer.byteLength(str, 'latin1');\n    parts.push(str);\n  };\n\n  pageContents.forEach((content, pi) => {\n    const len = Buffer.byteLength(content + '\\n', 'latin1');\n    addPart(`${pi + 1} 0 obj\\n<< /Length ${len} >>\\nstream\\n${content}\\nendstream\\nendobj\\n`);\n  });\n\n  const fontNum = pageContents.length + 1;\n  addPart(`${fontNum} 0 obj\\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\\nendobj\\n`);\n\n  const pageNums = pageContents.map((_, pi) => fontNum + 1 + pi);\n  pageNums.forEach((num, pi) => {\n    addPart(`${num} 0 obj\\n<< /Type /Page /Parent ${fontNum + 1 + pageContents.length} 0 R /MediaBox [0 0 595 842] /Contents ${pi + 1} 0 R /Resources << /Font << /F1 ${fontNum} 0 R >> >> >>\\nendobj\\n`);\n  });\n\n  const pagesNum = fontNum + 1 + pageContents.length;\n  addPart(`${pagesNum} 0 obj\\n<< /Type /Pages /Kids [${pageNums.map(n => `${n} 0 R`).join(' ')}] /Count ${pageNums.length} >>\\nendobj\\n`);\n\n  const catalogNum = pagesNum + 1;\n  addPart(`${catalogNum} 0 obj\\n<< /Type /Catalog /Pages ${pagesNum} 0 R >>\\nendobj\\n`);\n\n  let pdfStr = header + parts.join('');\n  const xrefPos = Buffer.byteLength(pdfStr, 'latin1');\n\n  let xref = `xref\\n0 ${parts.length + 1}\\n`;\n  xref += `0000000000 65535 f \\n`;\n  let cumOffset = Buffer.byteLength(header, 'latin1');\n  parts.forEach(part => {\n    xref += `${String(cumOffset).padStart(10, '0')} 00000 n \\n`;\n    cumOffset += Buffer.byteLength(part, 'latin1');\n  });\n\n  pdfStr += xref;\n  pdfStr += `trailer\\n<< /Size ${parts.length + 1} /Root ${catalogNum} 0 R >>\\nstartxref\\n${xrefPos}\\n%%EOF\\n`;\n\n  return Buffer.from(pdfStr, 'latin1').toString('base64');\n}\n\n// ==================== CONSTRUIRE UN LEAD PAR OFFRE ====================\nconst nbOffres = Math.max(pertinenceItems.length, offreItems.length);\nconst results = [];\n\nfor (let i = 0; i < nbOffres; i++) {\n\n  // --- Pertinence ---\n  const pertinenceRaw = parsePertinence(pertinenceItems[i]);\n  \n  const notesArr = [\n    pertinenceRaw.savoir_faire_note,\n    pertinenceRaw.potentiel_client_note,\n    pertinenceRaw.chiffre_affaires_note,\n    pertinenceRaw.duree_recurence_note,\n    pertinenceRaw.delai_reponse_note,\n  ].filter(n => n > 0);\n  \n  const pertinence = {\n    ...pertinenceRaw,\n    score_global: notesArr.length > 0\n      ? Math.round(notesArr.reduce((a, b) => a + b, 0) / notesArr.length * 10) / 10\n      : 0\n  };\n\n  // --- Offre ---\n  const data = parseOffre(offreItems[i] || {});\n  console.log(`Offre ${i+1} - name: \"${data.name || '(non trouvé)'}\"`);\n\n  // --- Source scraping ---\n  const traitementItem = traitementItems[i]?.json\n    || sourceItems[i]?.json\n    || {};\n  const urlAAP = traitementItem.urlAAP || null;\n  const idweb  = traitementItem.cle_dce || null;\n  console.log(`urlAAP ${i+1}: ${urlAAP}`);\n\n  // --- PDF ---\n  let pdfBase64 = null;\n\n  if (urlAAP) {\n    try {\n      console.log(`⬇️ Téléchargement PDF ${i+1}: ${urlAAP}`);\n      const response = await this.helpers.httpRequest({\n        method: 'GET',\n        url: urlAAP,\n        encoding: 'arraybuffer',\n        returnFullResponse: true,\n        timeout: 60000,\n        headers: {\n          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',\n          'Accept': 'application/pdf,*/*',\n        }\n      });\n      const bodyBuf = Buffer.from(response.body);\n      const magic = bodyBuf.slice(0, 4).toString('ascii');\n      console.log(`Magic: \"${magic}\", taille: ${bodyBuf.length}`);\n      if (magic === '%PDF') {\n        pdfBase64 = bodyBuf.toString('base64');\n        console.log(`✓ Vrai PDF téléchargé - ${pdfBase64.length} chars`);\n      } else {\n        console.log(`❌ Pas un PDF valide - réponse HTML probablement`);\n      }\n    } catch(e) {\n      console.log(`❌ Erreur téléchargement PDF: ${e.message}`);\n    }\n  }\n\n  if (!pdfBase64) {\n    const pdfTextItem = pdfItems[i];\n    const texteSource = pdfTextItem?.json?.text || null;\n    if (texteSource) {\n      pdfBase64 = generatePdfFromText(texteSource);\n      console.log(`✓ PDF généré depuis texte extrait - ${pdfBase64.length} chars`);\n    } else {\n      console.log(`⚠️ Aucun texte PDF disponible pour offre ${i+1}`);\n    }\n  }\n\n  const pdfFilename = data.name\n    ? `MarchesSec_${data.name.substring(0, 30).replace(/\\s+/g, '_')}_${idweb || 'doc'}.pdf`\n    : (idweb ? `MarchesSec_${idweb}.pdf` : null);\n\n  // --- Valeurs nettoyées ---\n  let expectedRevenue = Number(data.expected_revenue) || null;\n  let buId = data.business_unit_id ? Number(data.business_unit_id) : null;\n\n  const parseId = (val) => {\n    if (!val || val === \"\" || val === \"null\") return null;\n    const num = Number(val);\n    return isNaN(num) ? null : num;\n  };\n\n  const urlOffre = traitementItem.urlDetail || data.website || null;\n\n  const lead = {\n    name:              data.name || traitementItem.objet || null,\n    contact_name:      data.contact_name || traitementItem.acheteur || null,\n    email_from:        data.email_from || null,\n    phone:             data.phone || null,\n    mobile:            data.phone || null,\n    function:          data.function || null,\n    email_cc:          data.email_cc || null,\n    street:            data.street || null,\n    street2:           data.street2 || null,\n    city:              data.city || null,\n    zip:               data.zip || null,\n    company_name:      data.company_name || traitementItem.acheteur || null,\n    website:           urlOffre,\n    date_deadline:     data.date_deadline || traitementItem.dateCloture || null,\n    probability:       50,\n    expected_revenue:  expectedRevenue,\n    country_id:        75,\n    source_id:         11,\n    user_id:           2,\n    team_id:           1,\n    partner_id:        1,\n    business_unit_id:  buId,\n    offre_id:          parseId(data.offre_id),\n    sub_offre_id:      parseId(data.sous_offre_id),\n    Mode_de_livraison: data.Mode_de_livraison,\n    piste_source_id:   pisteSourceId ? Number(pisteSourceId) : null,\n    pertinence:        pertinence,\n    pdf_base64:        pdfBase64,\n    pdf_filename:      pdfFilename,\n  };\n\n  console.log(`\\n📊 LEAD ${i+1}:`);\n  console.log(`  name: ${lead.name || '❌ NULL'}`);\n  console.log(`  contact_name: ${lead.contact_name || '❌ NULL'}`);\n  console.log(`  expected_revenue: ${lead.expected_revenue ?? '❌ NULL'}`);\n  console.log(`  business_unit_id: ${lead.business_unit_id ?? '❌ NULL'}`);\n  console.log(`  PDF: ${lead.pdf_base64 ? '✅ OUI (' + lead.pdf_base64.length + ' chars)' : '❌ NULL'}`);\n  console.log(`  Score: ${lead.pertinence.score_global}`);\n\n  results.push(lead);\n}\n\nconsole.log(`\\n✅ ${results.length} leads construits`);\nreturn [{ json: { offers: results } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2448,
+        -1296
+      ],
+      "id": "a34e9a41-ba9c-4b34-af8a-0abae4d7698c",
+      "name": "Code in JavaScript13"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -2800,
+        -1424
+      ],
+      "id": "ee55a74a-e7b0-45b6-8ecd-55025e74f34c",
+      "name": "Merge4"
+    },
+    {
+      "parameters": {
+        "height": 816,
+        "width": 1856,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -3872,
+        -1856
+      ],
+      "typeVersion": 1,
+      "id": "58cf876c-f85c-436a-b0e6-b2eb7873a906",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6bd9c7f5-839b-4a8c-ac76-b6c62ddb86fb",
+              "name": "body.config_ia.criteres[0].nom",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "8e272dba-01fc-4818-8290-0a3ef4b72bc3",
+              "name": "body.config_ia.criteres[0].description",
+              "value": "={{ $json.body.config_ia.criteres[0].description }}",
+              "type": "string"
+            },
+            {
+              "id": "e18af789-d5bd-453e-9c2a-ecec14a1e792",
+              "name": "body.config_ia.criteres[0].pertinence_forte_si",
+              "value": "={{ $json.body.config_ia.criteres[0].pertinence_forte_si }}",
+              "type": "string"
+            },
+            {
+              "id": "8e55ccb4-d4be-4f07-a4b4-da43aed97507",
+              "name": "body.config_ia.criteres[1].nom",
+              "value": "={{ $json.body.config_ia.criteres[1].nom }}",
+              "type": "string"
+            },
+            {
+              "id": "0d28eb8b-8aaf-4cb2-8a2f-22194f6b7c9e",
+              "name": "body.config_ia.criteres[1].description",
+              "value": "={{ $json.body.config_ia.criteres[1].description }}",
+              "type": "string"
+            },
+            {
+              "id": "3ddb21ff-1952-4243-9a56-e05985d73221",
+              "name": "body.config_ia.criteres[1].pertinence_forte_si",
+              "value": "={{ $json.body.config_ia.criteres[1].pertinence_forte_si }}",
+              "type": "string"
+            },
+            {
+              "id": "99273bd3-27e7-4102-9469-fa34fbaa74cd",
+              "name": "body.config_ia.criteres[2].nom",
+              "value": "={{ $json.body.config_ia.criteres[2].nom }}",
+              "type": "string"
+            },
+            {
+              "id": "0c86565e-be75-4bd5-8258-ef0c7efc5942",
+              "name": "body.config_ia.criteres[2].description",
+              "value": "={{ $json.body.config_ia.criteres[2].description }}",
+              "type": "string"
+            },
+            {
+              "id": "ee91f031-5810-4897-8506-391652b57543",
+              "name": "body.config_ia.criteres[2].pertinence_forte_si",
+              "value": "={{ $json.body.config_ia.criteres[2].pertinence_forte_si }}",
+              "type": "string"
+            },
+            {
+              "id": "ac1090b0-e818-4b73-8913-63a60095254a",
+              "name": "body.config_ia.criteres[3].nom",
+              "value": "={{ $json.body.config_ia.criteres[3].nom }}",
+              "type": "string"
+            },
+            {
+              "id": "032b494a-d3b8-42f0-bedf-ed803f961e5c",
+              "name": "body.config_ia.criteres[3].description",
+              "value": "={{ $json.body.config_ia.criteres[3].description }}",
+              "type": "string"
+            },
+            {
+              "id": "0eefca6f-95ba-4395-97d4-88887bb582a7",
+              "name": "body.config_ia.criteres[3].pertinence_forte_si",
+              "value": "={{ $json.body.config_ia.criteres[3].pertinence_forte_si }}",
+              "type": "string"
+            },
+            {
+              "id": "d5fff3bc-47fd-4917-87ce-9eeacd5e02cf",
+              "name": "body.config_ia.criteres[4].nom",
+              "value": "={{ $json.body.config_ia.criteres[4].nom }}",
+              "type": "string"
+            },
+            {
+              "id": "f25d70ba-3ecc-4dc4-8414-b0bf41e0398b",
+              "name": "body.config_ia.criteres[4].description",
+              "value": "={{ $json.body.config_ia.criteres[4].description }}",
+              "type": "string"
+            },
+            {
+              "id": "9be11284-3438-4640-a6f7-e103870dea55",
+              "name": "body.config_ia.criteres[4].pertinence_forte_si",
+              "value": "={{ $json.body.config_ia.criteres[4].pertinence_forte_si }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4960,
+        -1600
+      ],
+      "id": "7b808df1-9edb-44c0-9da3-11881dae551b",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -3600,
+        -1696
+      ],
+      "id": "a386f2ff-cab8-43a9-a064-8fcb984e6019",
+      "name": "Merge5"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\n\n// ==================== 1. Séparer historique et offres ====================\nconst wonItems = allItems.filter(i => i.json?.partner_id);\n\nconst nouvellesOffres = allItems.filter(i => {\n  const text = i.json?.text || '';\n  return text.includes('=== NOUVEAU MARCHÉ À ÉVALUER ===');\n});\n\n// ==================== 2. Résumé compact historique ====================\nconst totalCA = wonItems.reduce((sum, i) => sum + (i.json.expected_revenue || 0), 0);\nconst avgCA = Math.round(totalCA / (wonItems.length || 1));\n\nconst parOffre = {};\nfor (const item of wonItems) {\n  const cat = item.json.offre_id || 'Autre';\n  if (!parOffre[cat]) parOffre[cat] = { count: 0, totalCA: 0 };\n  parOffre[cat].count++;\n  parOffre[cat].totalCA += item.json.expected_revenue || 0;\n}\n\nconst parClient = {};\nfor (const item of wonItems) {\n  const client = item.json.partner_id || '';\n  parClient[client] = (parClient[client] || 0) + 1;\n}\nconst clientsRecurrents = Object.entries(parClient)\n  .filter(([, count]) => count > 1)\n  .sort((a, b) => b[1] - a[1])\n  .slice(0, 8)\n  .map(([nom, count]) => `${nom} (${count}x)`)\n  .join(', ');\n\nconst resumeCategories = Object.entries(parOffre)\n  .sort((a, b) => b[1].count - a[1].count)\n  .map(([cat, data]) => `  - ${cat}: ${data.count} projets, CA moy. ${Math.round(data.totalCA / data.count).toLocaleString('fr')}€`)\n  .join('\\n');\n\nconst revenues = wonItems.map(i => i.json.expected_revenue || 0).sort((a, b) => a - b);\nconst minCA = revenues[0] || 0;\nconst maxCA = revenues[revenues.length - 1] || 0;\n\nconst historique = `=== HISTORIQUE MARCHÉS GAGNÉS STUDIA (${wonItems.length} projets) ===\nCA total: ${Math.round(totalCA).toLocaleString('fr')}€ | CA moyen: ${avgCA.toLocaleString('fr')}€\nFourchette: ${minCA.toLocaleString('fr')}€ → ${maxCA.toLocaleString('fr')}€\n\nRépartition par offre:\n${resumeCategories}\n\nClients récurrents: ${clientsRecurrents}`;\n\n// ==================== 3. Un item par offre ====================\nif (nouvellesOffres.length === 0) {\n  return [{ json: { text: `${historique}\\n\\n=== AUCUNE NOUVELLE OFFRE ===` } }];\n}\n\nreturn nouvellesOffres.map((item, index) => {\n  const text = item.json.text || '';\n  const marker = '=== NOUVEAU MARCHÉ À ÉVALUER ===';\n  const jsonPart = text.slice(text.indexOf(marker) + marker.length).trim();\n\n  const texteComplet = `${historique}\n\n=== NOUVEAU MARCHÉ À ÉVALUER ===\n${jsonPart}`;\n\n  return {\n    json: {\n      text: texteComplet,\n      offre_index: index + 1,\n      offre_name: item.json.offre_name || `Offre ${index + 1}`\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5424,
+        -1712
+      ],
+      "id": "35dfe537-36c3-4f63-ba9b-d98aac3591e7",
+      "name": "Code in JavaScript14"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.myNewField = 1;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2608,
+        -1376
+      ],
+      "id": "14962f8e-70ad-459a-b395-dbc8821d645e",
+      "name": "Code in JavaScript15"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\nlet historique = \"\";\nlet configIA = {};\nlet marchés = [];\n\nfor (const item of allItems) {\n  const json = item.json;\n  \n  // 1. Item avec texte (historique)\n  if (json.text && json.text.includes(\"HISTORIQUE MARCHÉS GAGNÉS\")) {\n    historique = json.text;\n  }\n  \n  // 2. Item avec config IA (structure: body.config_ia)\n  if (json.body?.config_ia) {\n    configIA = json.body.config_ia;\n  }\n  \n  // 3. Item avec pdfText (marché)\n  if (json.pdfText) {\n    marchés.push({\n      source: \"pdfText\",\n      cle_dce: json.cle_dce || null,\n      isValid: json.isValid || false,\n      filterReason: json.filterReason || null,\n      contenu: json.pdfText\n    });\n  }\n}\n\n// ==================== PRÉPARER TEXTE HISTORIQUE + CONFIG (partagé) ====================\nlet texteHistoriqueConfig = `=== HISTORIQUE ===\\n${historique || \"Non fourni\"}\\n\\n`;\ntexteHistoriqueConfig += `=== CRITÈRES IA ===\\n`;\n\nif (configIA.criteres && configIA.criteres.length > 0) {\n  const criteresRemplis = configIA.criteres.filter(c => \n    c.nom || c.description || c.pertinence_forte_si\n  );\n  \n  if (criteresRemplis.length > 0) {\n    criteresRemplis.forEach((critere, index) => {\n      texteHistoriqueConfig += `Critère ${index + 1}: ${critere.nom || \"Non nommé\"}\\n`;\n      if (critere.description) texteHistoriqueConfig += `  Description: ${critere.description}\\n`;\n      if (critere.pertinence_forte_si) texteHistoriqueConfig += `  Pertinence forte si: ${critere.pertinence_forte_si}\\n`;\n    });\n  } else {\n    texteHistoriqueConfig += `Aucun critère IA configuré (utiliser les règles standard)\\n`;\n  }\n} else {\n  texteHistoriqueConfig += `Aucun critère IA configuré (utiliser les règles standard)\\n`;\n}\n\n// ==================== CRÉER UN ITEM PAR MARCHÉ ====================\nconst results = [];\n\nif (marchés.length === 0) {\n  console.log(\"⚠️ Aucun marché détecté\");\n  return [{\n    json: {\n      text: texteHistoriqueConfig + \"\\n=== AUCUN MARCHÉ À ÉVALUER ===\\n\",\n      cle_dce: null,\n      nombre_marchés: 0\n    }\n  }];\n}\n\nmarchés.forEach((marche, index) => {\n  // Texte complet pour CE marché uniquement\n  let texteMarche = texteHistoriqueConfig;\n  texteMarche += `\\n=== MARCHÉ À ÉVALUER ===\\n`;\n  \n  if (marche.cle_dce) texteMarche += `Clé DCE: ${marche.cle_dce}\\n`;\n  if (marche.isValid !== undefined) texteMarche += `Validé: ${marche.isValid}\\n`;\n  if (marche.filterReason) texteMarche += `Raison: ${marche.filterReason}\\n`;\n  \n  if (marche.contenu) {\n    // Garder le contenu complet (pas de troncature pour le LLM)\n    texteMarche += `\\nContenu du marché:\\n${marche.contenu}\\n`;\n  }\n  \n  console.log(`✓ Marché ${index + 1}/${marchés.length} préparé : ${marche.cle_dce}`);\n  \n  results.push({\n    json: {\n      text: texteMarche,\n      cle_dce: marche.cle_dce,\n      isValid: marche.isValid,\n      filterReason: marche.filterReason,\n      pdfText: marche.contenu,\n      marche_index: index + 1,\n      nombre_marchés_total: marchés.length,\n      historique_present: !!historique,\n      config_present: Object.keys(configIA).length > 0\n    }\n  });\n});\n\nconsole.log(`✅ ${results.length} items créés (1 par marché) pour le LLM de pertinence`);\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3376,
+        -1648
+      ],
+      "id": "ad689759-7104-4b23-a5db-072a515d63da",
+      "name": "Code in JavaScript16"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -5856,
+        -864
+      ],
+      "id": "d1ecedf7-134d-4ca4-a583-72e8934598ed",
+      "name": "Loop Over Items3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Récupère le HTML\nconst html = $input.first().json.data;\nconst offres = [];\n\nconst regexTable = /<table class=\"consultation[^\"]*\">([\\s\\S]*?)<\\/table>/g;\nlet match;\n\nwhile ((match = regexTable.exec(html)) !== null) {\n  const blocHtml = match[1];\n  \n  const cleMatch = blocHtml.match(/addToFavoris\\('([^']+)'/);\n  const cle_dce = cleMatch ? cleMatch[1] : null;\n  if (!cle_dce) continue;\n  \n  const objetMatch = blocHtml.match(/class=\"objet\"[^>]*>[\\s\\S]*?<div[^>]*>([^<]+)<\\/div>/);\n  const objet = objetMatch ? objetMatch[1].trim() : '';\n  \n  // ← FILTRE : ignorer les offres sans objet\n  if (!objet) {\n    console.log(`⚠️ Offre ignorée (objet vide) : cle_dce=${cle_dce}`);\n    continue;\n  }\n  \n  const refMatch = blocHtml.match(/<th colspan=\"4\">([^<]+)<\\/th>/);\n  const reference = refMatch ? refMatch[1].trim() : '';\n  \n  const acheteurMatch = blocHtml.match(/<tr class=\"tr_pa[^\"]*\">[\\s\\S]*?<td colspan=\"5\">([^<]+)/);\n  const acheteur = acheteurMatch ? acheteurMatch[1].trim() : '';\n  \n  const dateMatch = blocHtml.match(/class=\"td_clot_date\">([^<]+)/);\n  const dateCloture = dateMatch ? dateMatch[1].trim() : '';\n\n  // ← NOUVEAU : parser la date de clôture en format YYYY-MM-DD pour Odoo\n  let dateDeadline = null;\n  if (dateCloture) {\n    const joursFr = {\n      'lundi': 'Mon', 'mardi': 'Tue', 'mercredi': 'Wed',\n      'jeudi': 'Thu', 'vendredi': 'Fri', 'samedi': 'Sat', 'dimanche': 'Sun'\n    };\n    const moisFr = {\n      'janvier': '01', 'février': '02', 'mars': '03', 'avril': '04',\n      'mai': '05', 'juin': '06', 'juillet': '07', 'août': '08',\n      'septembre': '09', 'octobre': '10', 'novembre': '11', 'décembre': '12'\n    };\n    // Format : \"mardi 19 janvier 2038 - 04:14 (...)\"\n    const dm = dateCloture.match(/(\\d{1,2})\\s+(\\w+)\\s+(\\d{4})/);\n    if (dm) {\n      const jour  = dm[1].padStart(2, '0');\n      const mois  = moisFr[dm[2].toLowerCase()] || '01';\n      const annee = dm[3];\n      dateDeadline = `${annee}-${mois}-${jour}`;\n    }\n  }\n  \n const urlDetail = `https://www.marches-securises.fr/entreprise/?module=consultation%7Cdetails&cle_dce=${cle_dce}`;\nconst urlAAP    = `https://www.marches-securises.fr/entreprise/?module=script%7Cdl_la_s&cle_dce=${cle_dce}`;\n  \n  console.log(`✅ Offre : ${cle_dce} | ${objet.substring(0, 60)} | deadline: ${dateDeadline}`);\n  \n  offres.push({\n    json: {\n      cle_dce,\n      objet,\n      reference,\n      acheteur,\n      dateCloture,\n      dateDeadline,   // ← format YYYY-MM-DD directement utilisable par Odoo\n      urlDetail,\n      urlAAP\n    }\n  });\n}\n\nconsole.log(`✅ ${offres.length} offres valides trouvées`);\nreturn offres;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6128,
+        -896
+      ],
+      "id": "83d7ca69-0972-466a-b520-cb05fa702d10",
+      "name": "Code in JavaScript17"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -5440,
+        -688
+      ],
+      "id": "2ac86a89-d5b8-420e-a588-bdb996240867",
+      "name": "OpenAI Chat Model6",
+      "credentials": {
+        "openAiApi": {
+          "id": "0p670OhPPPCuGRAG",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -3104,
+        -1552
+      ],
+      "id": "a00a1029-7d17-40ce-947f-dfa0488728db",
+      "name": "OpenAI Chat Model7",
+      "credentials": {
+        "openAiApi": {
+          "id": "0p670OhPPPCuGRAG",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst keywords = body.keywords_required;\n\nreturn [{ \n  json: { \n    keyword: keywords.join(' ')\n  } \n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6592,
+        -1008
+      ],
+      "id": "dbb6bc25-936f-4683-bd19-f480496d58fe",
+      "name": "Code in JavaScript18"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Tu es un expert en appels d'offres publics français. Ta mission est de vérifier \nsi un marché public correspond à un ou plusieurs mots-clés recherchés.\n\n════════════════════════════════════════════════════\nDONNÉES D'ENTRÉE\n════════════════════════════════════════════════════\nMots-clés à vérifier :{{ $('Code in JavaScript18').item.json.keyword }}\nOffre à analyser (PDF + AAPC) : {{ $json.text }}\n\n════════════════════════════════════════════════════\nPROCESSUS D'ANALYSE — SUIS LES ÉTAPES DANS L'ORDRE\n════════════════════════════════════════════════════\n\n─── ÉTAPE 1 — VÉRIFICATION DU CONTENU ───\nSi le texte du marché contient moins de 50 caractères utiles \n(pas de description, pas de lots, pas de prestations) :\n→ REJETÉ|Contenu vide ou insuffisant pour analyse|{{ $('Loop Over Items3').item.json.cle_dce }}\n→ STOP IMMÉDIATEMENT.\n\n─── ÉTAPE 2 — DÉCOMPOSITION DES MOTS-CLÉS ───\nLa chaîne de mots-clés peut contenir plusieurs termes.\nDécompose-la mentalement en :\n\n1. TERMES INDIVIDUELS : chaque mot ou expression de la chaîne\n   Exemple : \"audit documentaire diagnostic expertise technique\"\n   → termes : audit documentaire, diagnostic, expertise technique, \n              audit, documentaire, expertise, technique\n\n2. FAMILLE SÉMANTIQUE : le domaine métier auquel appartiennent ces termes\n   → Identifie les synonymes, expressions équivalentes, termes dérivés\n   → Cette famille couvre tout le champ lexical du domaine\n\n⚠️ RÈGLE FONDAMENTALE : \nLa correspondance d'UN SEUL terme OU d'UN SEUL synonyme de la famille \nsémantique suffit pour VALIDER. C'est une logique OU très large.\n\n─── ÉTAPE 3 — ANALYSE DU MARCHÉ ───\nLis attentivement :\n- Le titre principal du marché\n- La description principale\n- Le titre ET la description de CHAQUE lot (c'est critique pour les SAD)\n- Les CPV\n- Les prestations détaillées\n\nIdentifie si le marché est :\n□ Un marché simple à objet unique\n□ Un SAD (Système d'Acquisition Dynamique)\n□ Un accord-cadre multi-prestations\n□ Un marché multi-lots couvrant plusieurs domaines\n\n⚠️ Pour les SAD et accords-cadres multi-prestations :\nUN SEUL lot qui couvre le domaine du mot-clé suffit pour VALIDER.\nCes marchés sont larges par nature et couvrent souvent plusieurs domaines.\n\n─── ÉTAPE 4 — RECHERCHE DE CORRESPONDANCE ───\nPour CHAQUE terme décomposé ET CHAQUE synonyme de la famille sémantique, \ncherche une correspondance dans le marché selon 4 niveaux :\n\nNIVEAU 1 — Correspondance textuelle directe\n→ Le terme apparaît littéralement dans une prestation du marché\n\nNIVEAU 2 — Correspondance par synonyme\n→ Un synonyme ou variante apparaît (pluriel, forme verbale, abréviation)\n→ Ex: \"dématérialisation\" ≈ \"numérisation\", \"digitalisation\", \"zéro papier\"\n→ Ex: \"GED\" ≈ \"gestion électronique documents\", \"gestion documentaire\"\n→ Ex: \"audit\" ≈ \"audits\", \"mission d'audit\", \"évaluation\"\n→ Ex: \"RPA\" ≈ \"automatisation\", \"robotisation\", \"bot\"\n\nNIVEAU 3 — Correspondance par famille sémantique\n→ Une prestation du marché appartient au même domaine métier\n→ Ex: \"archives\" → \"gestion documentaire\", \"traitement documentaire\", \n       \"production documentaire\", \"analyse documentaire\", \"fonds documentaires\"\n→ Ex: \"data quality\" → \"gouvernance des données\", \"qualité des données\", \n       \"nettoyage de données\", \"mise en qualité\"\n→ Ex: \"conseil IT\" → \"accompagnement numérique\", \"AMOA\", \n       \"transformation digitale\"\n\nNIVEAU 4 — Correspondance par couverture implicite (SAD/accord-cadre)\n→ Le marché est un SAD/accord-cadre dont un lot couvre le domaine\n→ Même si le mot exact n'est pas écrit, la prestation est incluse\n\n─── ÉTAPE 5 — FILTRAGE DES FAUX MATCHES ───\nÉlimine les correspondances non pertinentes :\n\n❌ Occurrences dans coordonnées, SIRET, noms propres, adresses, emails\n❌ Occurrences dans noms d'organismes acheteurs ou services administratifs\n❌ Occurrences totalement accessoires (mention incidente, non prestation)\n\n❌ Sens métier clairement différent :\n→ \"expertise\" dans \"expertise géotechnique\" ≠ \"expertise IT/documentaire\"\n→ \"audit\" dans \"audit énergétique bâtiment\" ≠ \"audit SI/documentaire\"\n→ \"diagnostic\" dans \"diagnostic médical\" ≠ \"diagnostic numérique\"\n\n⚠️ EXCEPTION : Si le mot-clé est général (sans qualificatif), \ntous les sens métier sont acceptés.\n→ Mot-clé \"audit\" seul → tous les audits matchent\n→ Mot-clé \"audit documentaire\" → seuls les audits documentaires/SI matchent\n\n─── ÉTAPE 6 — DÉCISION FINALE ───\n\n✅ VALIDE si AU MOINS UNE des conditions est vraie :\n- Un terme a matché au Niveau 1, 2, 3 ou 4\n- Un lot d'un SAD/accord-cadre couvre le domaine du mot-clé\n- Une prestation du marché appartient à la famille sémantique du mot-clé\n\n❌ REJETÉ si TOUTES ces conditions sont vraies :\n- Aucun terme ni synonyme de la famille sémantique ne match\n- Aucun lot ne couvre le domaine\n- Le marché est clairement dans un secteur étranger au mot-clé\n- OU tous les matches sont des faux matches (coordonnées, sens différent)\n\n⚠️ RÈGLE D'OR : EN CAS DE DOUTE → VALIDE\nUn faux négatif (bon marché raté) coûte plus cher qu'un faux positif.\nMieux vaut analyser un marché borderline que le manquer.\n\n════════════════════════════════════════════════════\nFORMAT DE RÉPONSE — UNE SEULE LIGNE STRICTE\n════════════════════════════════════════════════════\nVALIDE|[raison courte 20 mots max : terme matché + où]|{{ $('Loop Over Items3').item.json.cle_dce }}\nREJETÉ|[raison courte 20 mots max : pourquoi aucun match]|{{ $('Loop Over Items3').item.json.cle_dce }}\n\nRien avant. Rien après. Pas d'introduction. Pas d'explication hors du format.\n\n════════════════════════════════════════════════════\nEXEMPLES DE RÉPONSE POUR CHAQUE CAS TYPE\n════════════════════════════════════════════════════\n\nCAS 1 — Match textuel direct :\nVALIDE|Le terme \"GED\" apparaît dans le titre du marché : \"mise en place d'une GED\".|abc123\n\nCAS 2 — Match par synonyme :\nVALIDE|Le marché mentionne \"numérisation des archives\", synonyme de dématérialisation.|def456\n\nCAS 3 — Match par famille sémantique :\nVALIDE|Le lot décrit \"analyse et production documentaire\", famille sémantique de la gestion documentaire.|ghi789\n\nCAS 4 — Match dans un SAD multi-lots :\nVALIDE|Le lot \"Performance administrative\" du SAD IA couvre le traitement documentaire demandé.|jkl012\n\nCAS 5 — Match général sur terme large :\nVALIDE|Le terme \"audit\" match avec \"missions d'audits de certification\" décrites dans le marché.|mno345\n\nCAS 6 — Rejet secteur étranger :\nREJETÉ|Aucun terme ni synonyme ne correspond, marché d'études hydrauliques et environnementales.|pqr678\n\nCAS 7 — Rejet faux match :\nREJETÉ|Le mot apparaît uniquement dans le nom du service acheteur, aucune prestation correspondante.|stu901\n\nCAS 8 — Rejet contenu vide :\nREJETÉ|Contenu vide ou insuffisant pour analyse|vwx234",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -5232,
+        -896
+      ],
+      "id": "1b693a12-27b7-415b-931c-806eaa0a27b9",
+      "name": "Basic LLM Chain4"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8069/api/piste/scrape_done",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer 24f572e1a8352e7ac7ac6f7554141e7d41d918ba"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ source_id: $('When Executed by Another Workflow').first().json.body.id, total_found: $json.created_count, filtered_out: 0, leads_created: $json.created_count }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1872,
+        -816
+      ],
+      "id": "3b19782d-c5c4-40ec-bc75-11d25f5f31ff",
+      "name": "Notifier Odoo fin scraping"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code in JavaScript5": {
+      "main": [
+        [
+          {
+            "node": "analyse les offre vs au mot-clé3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge4",
+            "type": "main",
+            "index": 2
+          },
+          {
+            "node": "Merge5",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "envoi des leads à l'API Odoo1": {
+      "main": [
+        [
+          {
+            "node": "Notifier Odoo fin scraping",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape marche securises1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript17",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "pdf1": {
+      "main": [
+        [
+          {
+            "node": "Extract from pdf1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from pdf1": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript12": {
+      "main": [
+        [
+          {
+            "node": "offre valide ?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "offre valide ?1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "analyse les offre vs au mot-clé3": {
+      "main": [
+        [
+          {
+            "node": "Merge4",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "analyse les offre vs au mot-clé3",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain5": {
+      "main": [
+        [
+          {
+            "node": "Merge4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript13": {
+      "main": [
+        [
+          {
+            "node": "envoi des leads à l'API Odoo1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge4": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript15",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Merge5",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge5": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript16",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript14": {
+      "main": [
+        [
+          {
+            "node": "Merge5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript15": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript13",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript16": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items3": {
+      "main": [
+        [],
+        [
+          {
+            "node": "pdf1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript17": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model6": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain4",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model7": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain5",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript18": {
+      "main": [
+        [
+          {
+            "node": "Scrape marche securises1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain4": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript18",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "da39e123-c102-4332-ae0d-5a0f5ac9de1d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
+  },
+  "id": "BAYU1348owuI2zOk",
+  "tags": []
+}

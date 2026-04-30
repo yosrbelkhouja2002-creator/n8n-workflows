@@ -1,0 +1,148 @@
+{
+  "name": "Phrase de recherche",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "770cdad1-0e38-4fbc-b54f-8d0a394961e2",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -992,
+        -192
+      ],
+      "id": "6f74945d-16d1-46a9-a19e-c7ea0bfc379e",
+      "name": "Webhook",
+      "webhookId": "770cdad1-0e38-4fbc-b54f-8d0a394961e2"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -176,
+        112
+      ],
+      "id": "0658974c-928c-412b-af83-89eabf5e816a",
+      "name": "OpenAI Chat Model5",
+      "credentials": {
+        "openAiApi": {
+          "id": "0p670OhPPPCuGRAG",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Tu es un expert en appels d'offres publics français travaillant pour STUDIA,\nune entreprise spécialisée en gestion documentaire, digitalisation, data et services IT.\nTon rôle : à partir d'une phrase commerciale, identifier les 3 domaines de compétences\nque STUDIA pourrait proposer en réponse à ce besoin.\n\nPour t'aider, voici les domaines d'activité de STUDIA :\nGestion Electronique de Documents, Gestion Documentaire Numérique, Système de Gestion de Documents,\nGestion de Contenu d'Entreprise, Coffre-fort Numérique, Digitalisation des Documents,\nDépôt Numérique, Zéro Papier, Archivage Électronique, Traitement Numérique,\nConception Structuration Documentaire, Architecture Documentaire, Organisation des Documents,\nPlan de Classement, Référentiel Documentaire, Nomenclature Documentaire, Arborescence Documentaire,\nGestion Documentaire, Management Documentaire, Gestion des Archives, Gestion des Fonds Documentaires,\nSystème Documentaire, Base Documentaire, Fonds d'Archives, Cartographie Documentaire,\nAudit Documentaire, Recensement des Documents, Inventaire Documentaire, Diagnostic Documentaire,\nCartographie des Flux Documentaires, Elimination Documentaire, Tri Documentaire,\nDestruction d'Archives, Purge Documentaire, Tableau de Gestion, Sort Final des Archives,\nÉlimination des Archives, Conseil Archivistique, Records Management, Conservation des Archives,\nPréservation Numérique, Conservation Analogique, Reproduction Documentaire,\nInventaire d'Archives, Vérification des Fonds, Contrôle des Archives, Audit des Archives,\nRecensement des Fonds, Record Management, Gestion des Documents d'Activité,\nGestion des Archives Courantes, Cycle de Vie des Documents, Gestion des Enregistrements,\nRobotic Process Automation, Automatisation Intelligente, Bot Métier, Gestion des flux,\nFlux de Travail, Gestion des Processus, Automatisation des Flux, Circuit de Validation,\nParapheur électronique, Signature Électronique, Circuit de Signature, Validation Électronique,\nSignature Numérique, Dossier de Signature, Cachet Électronique, Transformation Numérique,\nAutomatisation Métier, Modernisation des Processus, Optimisation Numérique,\nOutsourcing Métier, Délégation de Processus, Infogérance Métier, Prestation de Service Externalisée,\nScan, Capture Documentaire, Capture de Données, LAD RAD, Reconnaissance Documentaire,\nData Reporting, Reporting, Tableau de Bord, Restitution de Données, Pilotage par la Donnée,\nIndicateurs de Performance, Pilotage, Visualisation de Données, Business Intelligence,\nReporting Interactif, Qualité des Données, Fiabilité des Données, Gouvernance de la Donnée,\nNettoyage de Données, Master Data Management, Modélisation de Données, Schéma de Données,\nArchitecture de Données, Conception Base de Données, Entrepôt de Données, Data Integration,\nIntégration de Données, Interconnexion de Systèmes, Agrégation de Données, Fusion de Données,\nSynchronisation de Données, Data Performance, Performance des Données, Optimisation des Données,\nMontée en Charge, Tuning Base de Données, Optimisation des Requêtes, Portails Collaboratifs,\nEspace de Travail Numérique, Plateforme Collaborative, Digital Workplace,\nEspace Numérique de Travail, Portails Workflows Collaboratifs, Plateforme de Gestion des Processus,\nOutil Collaboratif Métier, Gestion Collaborative des Tâches, Outil de Pilotage Collaboratif,\nAgent Conversationnel, Assistant Virtuel, FAQ Dynamique, Assistant Intelligent,\nGestion de la Relation Client, Relation Client, Suivi Client, Gestion des Contacts,\nFidélisation Client, Service Client, Support, Support Utilisateur, Assistance,\nCentre de Services, Service Desk, Support Applicatif, Conseil, Audit, Expertise,\nAccompagnement, Mission de Conseil, Assistance Technique, Régie, Prestation Technique,\nMise à Disposition, Expertise Technique, Renfort Technique, Assistance à Maîtrise d'Ouvrage,\nAMO, Assistance MOA, Pilotage de Projet, Conduite de Projet, Maîtrise d'Ouvrage Déléguée,\nGestion de Projet, Management de Projet, Chef de Projet, Conduite du Changement,\nCoordination de Projet, Logiciel Métier, Application Métier, Solution Logicielle, ERP,\nSolution Applicative, Outil Métier, Développement Applicatif, Développement Informatique,\nDéveloppement Logiciel, Réalisation Applicative, Intégration Applicative,\nTierce Maintenance Applicative, Maintenance Prédictive, Maintenance Préventive,\nMaintien en Condition Opérationnelle, Infogérance Applicative, Traduction, Interprétariat,\nTraduction Technique, Traduction Juridique, Traduction Assermentée, Sous-titrage,\nIntelligence Artificielle, Machine Learning, Apprentissage Automatique,\nTraitement du Langage Naturel\n\nProcessus de réflexion (suivi obligatoire) :\n1. Lis la phrase et identifie le BESOIN RÉEL derrière les mots\n2. Demande-toi : \"Qu'est-ce que STUDIA peut apporter comme solution ?\"\n3. Sélectionne les 3 domaines STUDIA les plus adaptés à ce besoin\n4. Si aucun domaine STUDIA ne correspond → retourne {\"keywords\": [], \"hors_domaine\": true}\n\nIMPORTANT - qualité des mots-clés :\n- Chaque mot-clé doit avoir du sens SEUL dans une barre de recherche\n- Évite les termes trop génériques sans contexte :\n  \"support\", \"conseil\", \"services\", \"assistance\", \"logiciel\", \"système\"\n- Préfère des termes spécifiques et recherchables :\n  \"développement applicatif\", \"gestion électronique de documents\",\n  \"robotic process automation\", \"maintenance prédictive\"\n- Si un terme est trop vague, remplace-le par quelque chose de plus précis\n  parmi les domaines STUDIA\n- Tu DOIS choisir uniquement parmi les domaines listés ci-dessus\n\nRègles absolues :\n- INTERDIT de recopier les mots exacts de la phrase\n- INTERDIT d'utiliser des abréviations\n- OBLIGATOIRE de raisonner sur le besoin, pas sur les mots\n- En minuscules uniquement\n- Pas de 'et', la séparation doit être avec virgule\n\nExemples d'apprentissage :\nPhrase : \"Prestations de services d'assurance pour la ville\"\nRaisonnement : assurance = hors domaine STUDIA → mais une ville a besoin de gérer ses contrats, courriers, dossiers\nRéponse : {\"keywords\": [\"gestion documentaire\", \"gestion de la relation client\", \"dématérialisation\"]}\n\nPhrase : \"Fourniture de matériels réseaux électriques\"\nRaisonnement : électricité, matériel physique = 0 lien avec STUDIA\nRéponse : {\"keywords\": [], \"hors_domaine\": true}\n\nPhrase : \"Archivage et numérisation des dossiers administratifs\"\nRaisonnement : archivage + numérisation = cœur de métier STUDIA\nRéponse : {\"keywords\": [\"gestion électronique de documents\", \"dématérialisation\", \"record management\"]}\n\nTexte à analyser :\n{{ $json.body.search_phrase }}\n\nRéponds UNIQUEMENT en JSON, sans texte avant ni après :\n{\n  \"keywords\": [\"\", \"\", \"\"]\n}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -624,
+        -224
+      ],
+      "id": "0177c016-7597-4116-82e3-eb48ee999e51",
+      "name": "Basic LLM Chain4"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        208,
+        -64
+      ],
+      "id": "5d2cb51f-3b77-41d8-8c86-975464ab3de7",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// RÉCUPÉRATION DU SOURCE_ID DU WEBHOOK\n// ============================================\n\n// Méthode 1: Depuis le node \"Webhook\" directement par son nom\nlet webhookData = {};\ntry {\n  // Cherche le node appelé \"Webhook\" (ou le nom exact de votre node)\n  webhookData = $items(\"Webhook\")[0]?.json || {};\n} catch (e) {\n  webhookData = {};\n}\n\n// Si pas trouvé, essaie avec l'ID du node\nif (!webhookData.body?.source_id) {\n  try {\n    // Ou utilise le premier node du workflow\n    const allNodes = Object.keys($execution.runData || {});\n    const firstNode = allNodes[0];\n    webhookData = $items(firstNode)[0]?.json || {};\n  } catch (e2) {\n    // ignore\n  }\n}\n\nconst sourceId = webhookData.body?.source_id || webhookData.source_id || null;\n\n// ============================================\n// PARSAGE RÉPONSE LLM (node actuel)\n// ============================================\n\nconst llmOutput = $json.text || \"\";\n\nconst cleanJson = llmOutput\n  .replace(/\\\\n/g, '')\n  .replace(/\\\\\"/g, '\"')\n  .replace(/```json/g, '')\n  .replace(/```/g, '')\n  .trim();\n\nlet parsed;\ntry {\n  parsed = JSON.parse(cleanJson);\n} catch (e) {\n  parsed = { keywords: [] };\n}\n\n// ============================================\n// RETOUR FINAL\n// ============================================\n\nreturn {\n  json: {\n    keywords: parsed.keywords || [],\n    source_id: sourceId,\n    nb_mots_cles: (parsed.keywords || []).length,\n    methode: \"agent_ai_llm_studia\",\n    timestamp: new Date().toISOString(),\n    debug_webhook_found: !!webhookData.body  // Pour debug\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        -208
+      ],
+      "id": "b2556bed-e0d1-42d5-98fb-57f2d6fb68d3",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain4",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain4": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "989260f2-0bba-4944-8042-89be2524b627",
+  "meta": {
+    "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
+  },
+  "id": "-8N2wjNyc6IJmwwRQSdQV",
+  "tags": []
+}

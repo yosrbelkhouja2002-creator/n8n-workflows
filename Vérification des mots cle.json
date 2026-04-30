@@ -1,0 +1,344 @@
+{
+  "name": "Vérification des mots cle",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://www.marches-securises.fr/entreprise/",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "module",
+              "value": "liste_consultations"
+            },
+            {
+              "name": "r",
+              "value": "={{ $json.keyword }}"
+            },
+            {
+              "name": "presta",
+              "value": ";services;travaux;fournitures;autres"
+            },
+            {
+              "name": "date_cloture_type",
+              "value": "0"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        400,
+        -576
+      ],
+      "id": "c8dbc9d8-f449-4172-b640-6050e941acba",
+      "name": "Scrape marche securises"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        -400
+      ],
+      "id": "2f66d549-c995-4205-9fa1-cbc171f1568d",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Code node — initialisation de la liste\nconst workflowStaticData = $getWorkflowStaticData('global');\n\n// La première fois, on initialise la liste\nif (!workflowStaticData.keywords) {\n  workflowStaticData.keywords = [\n      \"Gestion Electronique de Documents\",\n      \"Gestion Documentaire Numérique\",\n      \"Système de Gestion de Documents\",\n      \"Gestion de Contenu d'Entreprise\",\n      \"Coffre-fort Numérique\",\n      \"Digitalisation des Documents\",\n      \"Dépôt Numérique\",\n      \"Zéro Papier\",\n      \"Archivage Électronique\",\n      \"Traitement Numérique\",\n      \"Conception Structuration Documentaire\",\n      \"Architecture Documentaire\",\n      \"Organisation des Documents\",\n      \"Plan de Classement\",\n      \"Référentiel Documentaire\",\n      \"Nomenclature Documentaire\",\n      \"Arborescence Documentaire\",\n      \"Gestion Documentaire\",\n      \"Management Documentaire\",\n      \"Gestion des Archives\",\n      \"Gestion des Fonds Documentaires\",\n      \"Système Documentaire\",\n      \"Base Documentaire\",\n      \"Fonds d'Archives\",\n      \"Cartographie Documentaire\",\n      \"Audit Documentaire\",\n      \"Recensement des Documents\",\n      \"Inventaire Documentaire\",\n      \"Diagnostic Documentaire\",\n      \"Cartographie des Flux Documentaires\",\n      \"Elimination Documentaire\",\n      \"Tri Documentaire\",\n      \"Destruction d'Archives\",\n      \"Purge Documentaire\",\n      \"Tableau de Gestion\",\n      \"Sort Final des Archives\",\n      \"Élimination des Archives\",\n      \"Conseil Archivistique\",\n      \"Gestion des Archives\",\n      \"Records Management\",\n      \"Conservation des Archives\",\n      \"Préservation Numérique\",\n      \"Conservation Analogique\",\n      \"Reproduction Documentaire\",\n      \"Inventaire d'Archives\",\n      \"Vérification des Fonds\",\n      \"Contrôle des Archives\",\n      \"Audit des Archives\",\n      \"Recensement des Fonds\",\n      \"Record Management\",\n      \"Gestion des Documents d'Activité\",\n      \"Gestion des Archives Courantes\",\n      \"Cycle de Vie des Documents\",\n      \"Gestion des Enregistrements\",\n      \"Robotic Process Automation\",\n      \"Automatisation Intelligente\",\n      \"Bot Métier\",\n      \"Gestion des flux\",\n      \"Flux de Travail\",\n      \"Gestion des Processus\",\n      \"Automatisation des Flux\",\n      \"Circuit de Validation\",\n      \"Parapheur électronique\",\n      \"Signature Électronique\",\n      \"Circuit de Signature\",\n      \"Validation Électronique\",\n      \"Signature Numérique\",\n      \"Dossier de Signature\",\n      \"Cachet Électronique\",\n      \"Transformation Numérique\",\n      \"Automatisation Métier\",\n      \"Modernisation des Processus\",\n      \"Optimisation Numérique\",\n      \"Outsourcing Métier\",\n      \"Délégation de Processus\",\n      \"Infogérance Métier\",\n      \"Prestation de Service Externalisée\",\n      \"Scan\",\n      \"Capture Documentaire\",\n      \"Capture de Données\",\n      \"LAD RAD\",\n      \"Reconnaissance Documentaire\",\n      \"Data Reporting\",\n      \"Reporting\",\n      \"Tableau de Bord\",\n      \"Restitution de Données\",\n      \"Pilotage par la Donnée\",\n      \"Indicateurs de Performance\",\n      \"Pilotage\",\n      \"Visualisation de Données\",\n      \"Business Intelligence\",\n      \"Reporting Interactif\",\n      \"Qualité des Données\",\n      \"Fiabilité des Données\",\n      \"Gouvernance de la Donnée\",\n      \"Nettoyage de Données\",\n      \"Master Data Management\",\n      \"Modélisation de Données\",\n      \"Schéma de Données\",\n      \"Architecture de Données\",\n      \"Conception Base de Données\",\n      \"Entrepôt de Données\",\n      \"Data Integration\",\n      \"Intégration de Données\",\n      \"Interconnexion de Systèmes\",\n      \"Agrégation de Données\",\n      \"Fusion de Données\",\n      \"Synchronisation de Données\",\n      \"Data Performance\",\n      \"Performance des Données\",\n      \"Optimisation des Données\",\n      \"Montée en Charge\",\n      \"Tuning Base de Données\",\n      \"Optimisation des Requêtes\",\n      \"Portails Collaboratifs\",\n      \"Espace de Travail Numérique\",\n      \"Plateforme Collaborative\",\n      \"Digital Workplace\",\n      \"Espace Numérique de Travail\",\n      \"Portails Workflows Collaboratifs\",\n      \"Plateforme de Gestion des Processus\",\n      \"Outil Collaboratif Métier\",\n      \"Gestion Collaborative des Tâches\",\n      \"Outil de Pilotage Collaboratif\",\n      \"Agent Conversationnel\",\n      \"Assistant Virtuel\",\n      \"FAQ Dynamique\",\n      \"Assistant Intelligent\",\n      \"Gestion de la Relation Client\",\n      \"Relation Client\",\n      \"Suivi Client\",\n      \"Gestion des Contacts\",\n      \"Fidélisation Client\",\n      \"Service Client\",\n      \"Support\",\n      \"Support Utilisateur\",\n      \"Assistance\",\n      \"Centre de Services\",\n      \"Service Desk\",\n      \"Support Applicatif\",\n      \"Conseil\",\n      \"Audit\",\n      \"Expertise\",\n      \"Accompagnement\",\n      \"Mission de Conseil\",\n      \"Assistance Technique\",\n      \"Régie\",\n      \"Prestation Technique\",\n      \"Mise à Disposition\",\n      \"Expertise Technique\",\n      \"Renfort Technique\",\n      \"Assistance à Maîtrise d'Ouvrage\",\n      \"AMO\",\n      \"Assistance MOA\",\n      \"Pilotage de Projet\",\n      \"Conduite de Projet\",\n      \"Maîtrise d'Ouvrage Déléguée\",\n      \"Gestion de Projet\",\n      \"Management de Projet\",\n      \"Chef de Projet\",\n      \"Conduite du Changement\",\n      \"Coordination de Projet\",\n      \"Logiciel Métier\",\n      \"Application Métier\",\n      \"Solution Logicielle\",\n      \"ERP\",\n      \"Solution Applicative\",\n      \"Outil Métier\",\n      \"Développement Applicatif\",\n      \"Développement Informatique\",\n      \"Développement Logiciel\",\n      \"Réalisation Applicative\",\n      \"Intégration Applicative\",\n      \"Tierce Maintenance Applicative\",\n      \"Maintenance Prédictive\",\n      \"Maintenance Préventive\",\n      \"Maintien en Condition Opérationnelle\",\n      \"Infogérance Applicative\",\n      \"Support Applicatif\",\n      \"Traduction\",\n      \"Interprétariat\",\n      \"Traduction Technique\",\n      \"Traduction Juridique\",\n      \"Traduction Assermentée\",\n      \"Sous-titrage\",\n      \"Intelligence Artificielle\",\n      \"Machine Learning\",\n      \"Apprentissage Automatique\",\n      \"Traitement du Langage Naturel\"\n\n  ];\n}\n\n// Retourner la liste active\nreturn workflowStaticData.keywords.map(kw => ({ json: { keyword: kw } }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        -448
+      ],
+      "id": "f18b88a6-0caa-4d1b-ae0e-1255b9665494",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        16,
+        -480
+      ],
+      "id": "42631815-ab24-476f-8b5d-4228d01de1db",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Code in JavaScript1 — extraire count\nconst html = $input.item.json.data;\n\n// ✅ Aller chercher le keyword directement depuis le Loop Over Items\nconst keyword = $('Loop Over Items').item.json.keyword;\n\nconst matchCount = html.match(/(\\d+)\\s+consultation[s]?\\s+trouv[ée][es]*/i);\nconst matchZero = html.match(/aucune\\s+consultation\\s+trouv[ée][e]*/i);\n\nlet count = 0;\nif (matchCount) {\n  count = parseInt(matchCount[1]);\n} else if (matchZero) {\n  count = 0;\n}\n\nreturn [{\n  json: {\n    keyword,\n    count,\n    hasOffers: count > 0,\n    status: count > 0 ? `✅ ${count} offres` : '❌ Aucune offre'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        -512
+      ],
+      "id": "66ba1098-6d6b-42cb-b47d-c7098d70e7d1",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "96d0d28c-3b0b-425d-8fbd-65e6ba2f95a2",
+              "leftValue": "={{ $json.hasOffers }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        944,
+        -496
+      ],
+      "id": "5190c86a-0580-4f5f-966b-4f90baebdc7d",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Code in JavaScript2 — branche TRUE (count == 0)\nconst workflowStaticData = $getWorkflowStaticData('global');\nconst keywordToRemove = $input.item.json.keyword;\n\n// Vérification de sécurité\nif (!workflowStaticData.keywords) {\n  return [{ json: { error: 'Liste non initialisée', keyword: keywordToRemove } }];\n}\n\n// Supprimer le mot-clé sans offre\nworkflowStaticData.keywords = workflowStaticData.keywords.filter(\n  kw => kw !== keywordToRemove\n);\n\nconsole.log(`🗑️ Supprimé : \"${keywordToRemove}\"`);\nconsole.log(`📋 Restants : ${workflowStaticData.keywords.length}`);\n\nreturn [{\n  json: {\n    action: 'supprimé',\n    keyword: keywordToRemove,\n    nb_restants: workflowStaticData.keywords.length,\n    liste_restante: workflowStaticData.keywords\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        -96
+      ],
+      "id": "5298a858-dfcc-415a-bdf5-9b864a145b90",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        624,
+        -512
+      ],
+      "id": "1e168868-ee00-40ff-9f19-b1a3367a2176",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "87f1b661-262d-4b21-b5c0-0598b0b943a8",
+              "name": "keyword",
+              "value": "={{ $json.keyword }}",
+              "type": "string"
+            },
+            {
+              "id": "2ea73cad-f62c-4570-90cc-2f90fbf4400e",
+              "name": "hasOffers",
+              "value": "={{ $json.hasOffers }}",
+              "type": "boolean"
+            },
+            {
+              "id": "0e361528-0459-4c17-bbda-66ae85e587d5",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        -448
+      ],
+      "id": "6682da95-17b6-49da-b2c9-21eb6b75ed09",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        256,
+        -224
+      ],
+      "id": "540da4a6-02ee-4d58-a58e-94a40f990f5d",
+      "name": "Merge1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Scrape marche securises",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Scrape marche securises": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "ade08a36-f728-494f-8ffa-9330ccc08fc5",
+  "meta": {
+    "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
+  },
+  "id": "yxseyJ4LOdkcIuC2-xKkP",
+  "tags": []
+}

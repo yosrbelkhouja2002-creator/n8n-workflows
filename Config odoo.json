@@ -1,0 +1,396 @@
+{
+  "name": "Config odoo",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "piste-run",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        80,
+        80
+      ],
+      "id": "602120a7-eb5e-418d-b98e-7573e0a9b90a",
+      "name": "Webhook1",
+      "webhookId": "06528e65-75c5-4715-bbb0-c86f78c902bc"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        512,
+        992
+      ],
+      "id": "21d5d6db-e3ef-4ee8-9c66-6ccda5b26949",
+      "name": "Schedule Trigger1"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8069/api/piste/auto_sources",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 24f572e1a8352e7ac7ac6f7554141e7d41d918ba"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        720,
+        992
+      ],
+      "id": "d483306e-6658-4e9c-a56d-248e9b1cb73d",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const scheduleData = $('Schedule Trigger1').first().json;\nconst currentHour = parseInt(scheduleData['Hour']);\nconst currentMinute = parseInt(scheduleData['Minute']);\n\n// ✅ Crée \"now\" en heure locale depuis le Schedule Trigger\nconst now = new Date();\nconst nowLocal = new Date(now.getTime() + 60 * 60 * 1000); // UTC+1\n\nfunction shouldRun(s) {\n  if (!s.frequency) return false;\n\n  if (s.date_end && new Date(s.date_end + 'T23:59:59') < nowLocal) return false;\n  if (s.date_start && new Date(s.date_start + 'T00:00:00') > nowLocal) return false;\n\n  if (s.time) {\n    const parts = s.time.split(':');\n    const configH = parseInt(parts[0]);\n    if (!isNaN(configH) && currentHour !== configH) return false;\n  }\n\n  const lastRun = s.last_run ? new Date(s.last_run) : new Date(0);\n  const diffHours = (nowLocal - lastRun) / (1000 * 60 * 60);\n\n  if (s.frequency === 'daily') return diffHours >= 20;\n  if (s.frequency === 'weekly') return diffHours >= 144;\n  if (s.frequency === 'custom') {\n    const interval = s.interval || 1;\n    if (s.unit === 'hours') return diffHours >= interval * 0.9;\n    if (s.unit === 'days') return diffHours >= interval * 24 * 0.9;\n    if (s.unit === 'weeks') return diffHours >= interval * 24 * 7 * 0.9;\n    if (s.unit === 'months') return diffHours >= interval * 24 * 30 * 0.9;\n  }\n  return false;\n}\n\nconst sources = $input.first().json.sources || [];\nconst toRun = sources.filter(shouldRun);\n\nif (toRun.length === 0) {\n  return [{ json: { \n    message: \"Aucune veille à lancer\", \n    skip: true, \n    checked_at: nowLocal.toISOString(),\n    currentHour: currentHour\n  }}];\n}\n\nreturn toRun.map(s => ({ json: s }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        992
+      ],
+      "id": "96186e0f-09b3-476b-8106-0dfe882c2606",
+      "name": "Code in JavaScript10"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7d48d842-3320-4999-8b4d-487c2ba05c34",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "manual",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1088,
+        992
+      ],
+      "id": "36b7b42e-203a-477b-b11f-c555e233d5b0",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "89ddba4e-a204-4633-8748-f61abb63c665",
+              "leftValue": "={{ $json.body.automation.type }}",
+              "rightValue": "manual",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        688,
+        256
+      ],
+      "id": "d61b86c4-39e2-45dd-9ccd-beac664d73d0",
+      "name": "If4"
+    },
+    {
+      "parameters": {
+        "content": "## Automatique",
+        "height": 208,
+        "width": 1200,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        480,
+        944
+      ],
+      "typeVersion": 1,
+      "id": "a4b0cd85-303d-470a-bbce-c7a0ca72fbba",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "## Manuel",
+        "height": 304,
+        "width": 1008
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -160,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "e5b83f67-3297-40c9-9486-2dd6e7d5a6f4",
+      "name": "Sticky Note11"
+    },
+    {
+      "parameters": {
+        "content": "## Quel site ?\n",
+        "height": 880,
+        "width": 784,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1488,
+        -64
+      ],
+      "typeVersion": 1,
+      "id": "0f5f97af-6e51-4d60-b9f2-857ab0452beb",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "5d6efc42-be0e-4da1-ba29-de0eda6a60bc",
+                    "leftValue": "={{ $json.body.platforms.marchessecurise }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "abbb39f3-a6c3-409f-91b9-ab0beea65c36",
+                    "leftValue": "={{ $('Webhook1').item.json.body.platforms.boamp }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        944,
+        112
+      ],
+      "id": "754e0f28-7ccb-4da9-a63a-13cc27825696",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "BAYU1348owuI2zOk",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/BAYU1348owuI2zOk",
+          "cachedResultName": "Marchés Sécurisés"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1824,
+        144
+      ],
+      "id": "b0238b9d-a0fb-44be-9c04-e1a3ea564255",
+      "name": "Call 'Odoo_Source_Agent'"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "RCNbMXFTLcP_K_yBlRtcR",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/RCNbMXFTLcP_K_yBlRtcR",
+          "cachedResultName": "Boamp"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1152,
+        208
+      ],
+      "id": "2a116f32-271b-4295-ae22-8919c614feed",
+      "name": "Call 'Boamp'"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "If4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript10": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If4": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Call 'Odoo_Source_Agent'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call 'Boamp'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "684e5df3-af43-456f-b529-079c0f54e06e",
+  "meta": {
+    "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
+  },
+  "id": "syCysGAOfGSwz76F2tYM-",
+  "tags": []
+}
